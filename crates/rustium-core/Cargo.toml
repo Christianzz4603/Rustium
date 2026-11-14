@@ -1,0 +1,15 @@
+[package]
+name = "rustium-core"
+description = "Public facade of the Rustium browser engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+rustium-common = { path = "../rustium-common" }
+rustium-dom = { path = "../rustium-dom" }
+rustium-html = { path = "../rustium-html" }
+
+[lints]
+workspace = true
