@@ -6,6 +6,7 @@ members = [
     "crates/rustium-html",
     "crates/rustium-core",
     "benchmarks/parse-bench",
+    "tools/html5lib-runner",
 ]
 
 [workspace.package]
