@@ -1,0 +1,13 @@
+[package]
+name = "rustium-dom"
+description = "Arena-backed DOM tree for the Rustium browser engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+rustium-common = { path = "../rustium-common" }
+
+[lints]
+workspace = true
