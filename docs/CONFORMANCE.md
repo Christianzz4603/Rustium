@@ -25,23 +25,31 @@ relies on catching panics so one crash counts as one failure.
 - **Skipped** (counted separately, never as passes): fragment tests whose context element is namespaced (`svg x`, `math x`).
 - A panic is a failure.
 
-## Baseline
+## Results
 
-WPT commit `fa649586f35119af9032312ef21e300e41d1c3b6`, Rustium at the commit that
-added the runner:
+WPT commit `fa649586f35119af9032312ef21e300e41d1c3b6`.
 
-**1051 of 1891 tests run pass (55.6%); 67 skipped.**
+| Stage | Pass / run | Rate | Skipped |
+|-------|-----------:|-----:|--------:|
+| Runner introduced (simplified tables) | 1051 / 1891 | 55.6% | 67 |
+| Table mode family + foster parenting + quirks approximation | 1221 / 1891 | 64.6% | 67 |
+| In head noscript | 1247 / 1891 | 65.9% | 67 |
+| Script-data escape states, `</script` at EOF | 1311 / 1891 | 69.3% | 67 |
 
-Known causes of the failures, matching the limitations in ARCHITECTURE.md:
+Fully passing files include `tests16`, `scriptdata01`, `noscript01`, `blocks`,
+`comments01`, `inbody01`, `isindex`, `menuitem-element`, `ruby`, `void-in-phrasing`.
 
-| Area | Vectors mostly failing |
-|------|------------------------|
-| Table insertion modes (no implied `tbody`/`tr`, no foster parenting) | tables01, tests1, tests6, tests9... |
-| Foreign content (svg, math) | svg, math, tests10, tests11, tests17, tests24 |
-| `<template>` | template.dat |
-| In head noscript (scripting off) | noscript01 |
-| In select | parts of tests1, tests_innerHTML_1 |
-| DOCTYPE identifiers and quirks mode | doctype01, quirks01 |
-| Processing-instruction / bogus-comment details | processing-instructions |
+## Remaining failures, by cause
 
-Update this file whenever the runner's total changes, with the new WPT commit.
+| Area | Vectors (fail count) |
+|------|----------------------|
+| `<template>` (no template contents, no template insertion mode) | template.dat (125) |
+| Processing-instruction nodes expected by current vectors; Rustium emits bogus comments | processing-instructions.dat (84) |
+| Foreign content (svg, math, namespaced attributes, integration points) | tests9 (27), tests10 (54), tests11, tests19 (part), tests24, svg, math |
+| DOCTYPE public/system identifiers and exact quirks mode | doctype01 (16), quirks01, parts of others |
+| In select | parts of tests1, tests2, webkit, tests_innerHTML_1 |
+| `plain-text-unsafe`, `domjs-unsafe`, `tests21`, `webkit02`, `tests6/18/20/26` | not yet triaged |
+
+The last row is unexamined: causes are not known yet and are not guessed here.
+
+Update this file whenever the runner's total changes, with the WPT commit used.

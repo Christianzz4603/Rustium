@@ -106,20 +106,20 @@ to avoid empty crates (brief section 3).
 
 Each is reported at runtime as an `Unsupported` diagnostic where practical.
 
-- Tables use a simplified rule set: no implied `<tbody>`, no foster parenting, no "in table" mode family. Output differs from the spec for malformed tables.
+- Table modes (in table, table text, caption, column group, table body, row, cell) and foster parenting follow the spec, but `<template>` interactions and the select-in-table modes are not implemented.
 - No "in select", "in frameset", or "in template" modes. `<template>` has no content fragment; `<frameset>` is dropped.
 - No foreign content: `<svg>` and `<math>` are plain HTML elements.
-- No quirks-mode determination; DOCTYPE public/system identifiers are skipped.
+- Quirks mode is approximated: a missing DOCTYPE or a DOCTYPE name other than `html` means quirks. Public/system identifiers are not parsed, so DOCTYPEs with legacy identifiers are misclassified. Quirks mode currently only affects whether `<table>` closes an open `<p>`.
 - Named character references: about 80 of 2,231.
-- Script-data escape states in the tokenizer are not implemented (affects `<!--` inside `<script>`).
+- Processing instructions: some current html5lib/WPT vectors (`processing-instructions.dat`) expect `<?x>` to become a processing-instruction node; Rustium emits a bogus comment as the HTML Living Standard version it was written against does. Not verified against the latest spec text.
 - NUL in data state is dropped (the spec emits it and the tree builder ignores it; the visible result is the same).
 - Serializer escapes all text, including inside `<script>`/`<style>`; it is a debug aid, not the spec's fragment serialization algorithm.
 - DOM events, live collections, namespaces, shadow DOM, node reclamation: not implemented.
-- Not yet run against html5lib-tests or Web Platform Tests. Correctness evidence so far is 94 hand-written unit/integration tests plus a seeded fuzz test that checks tree invariants.
+- Measured against the WPT html5lib tree-construction vectors: 1311 of 1891 run pass (69.3%), 67 skipped. This is a measurement, not a compliance claim; see `docs/CONFORMANCE.md` for the failing areas. Correctness evidence also includes 102 hand-written tests and a seeded fuzz test that checks tree invariants.
 
 ## 8. Testing strategy
 
 - Unit tests live beside code; integration tests in each crate's `tests/`.
 - Tree-construction expectations are written as serialized HTML or tree dumps.
 - A seeded fuzz test (`seeded_fuzz_keeps_tree_invariants`) parses 3000 generated inputs as documents and fragments and verifies sibling/parent link consistency.
-- Next: import html5lib-tests tree-construction and tokenizer vectors (data files in `tests/html/`), and report pass rates in the README before making any compliance claim.
+- Tree-construction vectors from web-platform-tests run through `tools/html5lib-runner` (not vendored; see `docs/CONFORMANCE.md`). Next: tokenizer `.test` vectors (needs a JSON reader), then foreign content, `<template>`, and DOCTYPE identifiers.

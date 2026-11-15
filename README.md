@@ -21,8 +21,9 @@ What works today:
 What does **not** exist yet: CSS, style, layout, painting, networking, JavaScript,
 WebAssembly, security boundaries. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
-**No standards-compliance claim is made.** The parser has not yet been run
-against html5lib-tests or the Web Platform Tests; see "Known limitations" in
+**No standards-compliance claim is made.** Measured against the web-platform-tests
+html5lib tree-construction vectors, 69.3% pass (1311 of 1891 run, 67 skipped);
+see [docs/CONFORMANCE.md](docs/CONFORMANCE.md) and the known limitations in
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Use
@@ -52,7 +53,9 @@ The engine currently has no third-party dependencies.
 | `crates/rustium-dom` | Arena DOM |
 | `crates/rustium-html` | Tokenizer and tree builder |
 | `crates/rustium-core` | Public facade for embedders (API unstable) |
-| `docs/` | Architecture, roadmap, security, conventions |
+| `tools/html5lib-runner` | Runs html5lib tree-construction vectors and reports pass rates |
+| `benchmarks/` | Parse benchmark |
+| `docs/` | Architecture, conformance, roadmap, security, conventions |
 
 ## License
 

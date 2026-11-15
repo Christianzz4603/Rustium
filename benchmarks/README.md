@@ -22,6 +22,20 @@ Throughput is flat across sizes, which is the property to preserve: the first
 version of this benchmark showed it falling from 51 to 1.5 MB/s, which exposed a
 quadratic scan in comment tokenization (fixed).
 
+## After table modes, in head noscript, script escape states
+
+Same machine class, two runs, release profile. Throughput is still flat across
+sizes but about 25% lower than the baseline above. The causes were not profiled;
+likely contributors are the extra `tbody`/`tr` nodes and the extra scope checks
+and mode dispatch for every table token. Optimizing is deferred until it is
+measured with a profiler.
+
+| Input | MB/s (run 1) | MB/s (run 2) | Nodes |
+|-------|-------------:|-------------:|------:|
+| 33 KB | 41.1 | 43.4 | 4,609 |
+| 344 KB | 43.3 | 43.8 | 46,009 |
+| 1.7 MB | 43.2 | n/a | 230,009 |
+
 ## Not measured yet
 
 Peak memory, startup of a full engine, CSS parsing, style, layout, paint,
