@@ -1,9 +1,9 @@
 //! Active formatting elements and the adoption agency algorithm.
 //!
 //! This is what recovers sensible trees from misnested markup such as
-//! `<b><i></b></i>` or `<a>1<div>2</a>3</div>`. Foster parenting is not
-//! implemented, so the "appropriate place for inserting" is always the common
-//! ancestor itself.
+//! `<b><i></b></i>` or `<a>1<div>2</a>3</div>`. The last node is inserted at
+//! the "appropriate place" for the common ancestor, which honors foster
+//! parenting.
 
 use crate::tree_builder::{is_special, Fmt, TreeBuilder, MAX_OPEN_DEPTH};
 use rustium_dom::NodeId;
@@ -208,7 +208,8 @@ impl TreeBuilder {
                 let _ = self.dom.append_child(new, last_node);
                 last_node = new;
             }
-            let _ = self.dom.append_child(common_ancestor, last_node);
+            let (place, before) = self.appropriate_place(Some(common_ancestor));
+            let _ = self.dom.insert_before(place, last_node, before);
             let new_fe = self.create_element(&fe_name, &fe_attrs);
             let kids: Vec<NodeId> = self.dom.children(furthest_block).collect();
             for k in kids {

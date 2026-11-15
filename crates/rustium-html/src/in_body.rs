@@ -1,9 +1,5 @@
-//! The "in body" insertion mode, plus the simplified table handling.
-//!
-//! Table handling deviates from the HTML Living Standard: there is no
-//! "in table" mode family, so no implied `<tbody>`, no foster parenting, and
-//! stray table tags are closed by scanning to the nearest open `<table>`.
-//! Every `<table>` start tag emits an `Unsupported` diagnostic.
+//! The "in body" insertion mode. The table modes it hands off to are in
+//! `tables.rs`.
 
 use crate::token::Token;
 use crate::tree_builder::{is_special, Fmt, Mode, Scope, TreeBuilder};
@@ -13,9 +9,6 @@ const VOID: &[&str] = &[
     "keygen", "link", "meta", "param", "source", "track", "wbr",
 ];
 const HEADINGS: &[&str] = &["h1", "h2", "h3", "h4", "h5", "h6"];
-const TABLE_PARTS: &[&str] = &[
-    "caption", "colgroup", "tbody", "tfoot", "thead", "tr", "td", "th",
-];
 
 impl TreeBuilder {
     pub(crate) fn in_body(&mut self, tok: Token) -> Option<Token> {
@@ -43,41 +36,6 @@ impl TreeBuilder {
             }
             Token::EndTag { name } => self.body_end_tag(&name),
             Token::Eof => None,
-        }
-    }
-
-    /// Closes the nearest open element named in `targets` above the nearest `<table>`.
-    fn close_table_part(&mut self, targets: &[&str]) {
-        let mut found = None;
-        for i in (0..self.open.len()).rev() {
-            let name = self.name(self.open[i]);
-            if targets.contains(&name.as_str()) {
-                found = Some(i);
-                break;
-            }
-            if matches!(name.as_str(), "table" | "html" | "template" | "body") {
-                break;
-            }
-        }
-        if let Some(i) = found {
-            let removed = self.open.split_off(i);
-            for n in removed {
-                if matches!(self.name(n).as_str(), "td" | "th" | "caption") {
-                    self.clear_formatting_to_marker();
-                }
-            }
-        }
-    }
-
-    fn pop_table_part_until(&mut self, name: &str) {
-        while let Some(n) = self.open.pop() {
-            let nm = self.name(n);
-            if matches!(nm.as_str(), "td" | "th" | "caption") {
-                self.clear_formatting_to_marker();
-            }
-            if nm == name {
-                break;
-            }
         }
     }
 
@@ -228,32 +186,14 @@ impl TreeBuilder {
                 self.push_marker();
             }
             "table" => {
-                self.close_p_if_in_button_scope();
-                self.insert_element(n, &attrs);
-                self.push_marker();
-                self.unsupported("table-simplified-tree-construction");
-            }
-            "caption" | "colgroup" | "tbody" | "tfoot" | "thead" => {
-                self.close_table_part(&[
-                    "caption", "colgroup", "tbody", "tfoot", "thead", "tr", "td", "th",
-                ]);
-                self.insert_element(n, &attrs);
-                if n == "caption" {
-                    self.push_marker();
+                if !self.quirks {
+                    self.close_p_if_in_button_scope();
                 }
-            }
-            "tr" => {
-                self.close_table_part(&["tr"]);
                 self.insert_element(n, &attrs);
+                self.mode = Mode::InTable;
             }
-            "td" | "th" => {
-                self.close_table_part(&["td", "th"]);
-                self.insert_element(n, &attrs);
-                self.push_marker();
-            }
-            "col" => {
-                self.insert_element(n, &attrs);
-                self.pop();
+            "caption" | "col" | "colgroup" | "tbody" | "td" | "tfoot" | "th" | "thead" | "tr" => {
+                self.error("unexpected-table-part-start-tag");
             }
             "area" | "br" | "embed" | "img" | "keygen" | "wbr" | "input" => {
                 self.reconstruct_formatting();
@@ -440,22 +380,6 @@ impl TreeBuilder {
             "br" => {
                 self.error("end-tag-br");
                 self.body_start_tag("br", Vec::new(), false);
-            }
-            "table" => {
-                if !self.has_in_scope("table", Scope::Table) {
-                    self.error("unexpected-end-tag");
-                } else {
-                    self.pop_table_part_until("table");
-                    self.clear_formatting_to_marker();
-                }
-            }
-            _ if TABLE_PARTS.contains(&n) => {
-                if !self.has_in_scope(n, Scope::Table) {
-                    self.error("unexpected-end-tag");
-                } else {
-                    self.generate_implied_end_tags(None);
-                    self.pop_table_part_until(n);
-                }
             }
             "template" => {
                 return self.in_head(Token::EndTag {
