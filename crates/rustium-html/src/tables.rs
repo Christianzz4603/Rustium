@@ -41,6 +41,7 @@ impl TreeBuilder {
                 "table" => Mode::InTable,
                 "head" if !last => Mode::InHead,
                 "body" => Mode::InBody,
+                "frameset" => Mode::InFrameset,
                 "html" => {
                     if self.head.is_none() {
                         Mode::BeforeHead

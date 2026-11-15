@@ -14,6 +14,11 @@ impl TreeBuilder {
     pub(crate) fn in_body(&mut self, tok: Token) -> Option<Token> {
         match tok {
             Token::Character(s) => {
+                if s.chars()
+                    .any(|c| !matches!(c, ' ' | '\t' | '\n' | '\x0c' | '\0'))
+                {
+                    self.frameset_ok = false;
+                }
                 self.reconstruct_formatting();
                 self.insert_text(&s);
                 None
@@ -66,6 +71,7 @@ impl TreeBuilder {
     }
 
     fn body_start_tag(&mut self, n: &str, attrs: Vec<(String, String)>, self_closing: bool) {
+        self.note_frameset_ok(n, &attrs);
         match n {
             "html" => {
                 self.error("unexpected-html-start-tag");
@@ -93,7 +99,8 @@ impl TreeBuilder {
                     }
                 }
             }
-            "frameset" | "frame" => self.unsupported("frameset-not-implemented"),
+            "frameset" => self.body_frameset(&attrs),
+            "frame" => self.error("unexpected-frame-start-tag"),
             "head" => self.error("unexpected-head-start-tag"),
             "address" | "article" | "aside" | "blockquote" | "center" | "details" | "dialog"
             | "dir" | "div" | "dl" | "fieldset" | "figcaption" | "figure" | "footer" | "header"

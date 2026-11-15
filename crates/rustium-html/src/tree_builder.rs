@@ -2,10 +2,10 @@
 //!
 //! Implemented insertion modes: initial, before html, before head, in head,
 //! after head, in body, text, the table family (in `tables.rs`), after body,
-//! after after body.
+//! after after body, and the frameset modes (in `frameset.rs`).
 //!
 //! NOT implemented (reported as `Unsupported` diagnostics where encountered):
-//! in select / in frameset / in template modes, foreign
+//! in select / in template modes, foreign
 //! content (svg/math are plain elements), and exact quirks-mode detection
 //! (the DOCTYPE name only is consulted, not its identifiers). The table mode
 //! family lives in `tables.rs`.
@@ -39,6 +39,9 @@ pub(crate) enum Mode {
     InCell,
     AfterBody,
     AfterAfterBody,
+    InFrameset,
+    AfterFrameset,
+    AfterAfterFrameset,
 }
 
 #[derive(Clone, Debug)]
@@ -179,6 +182,8 @@ pub(crate) struct TreeBuilder {
     pub pending_table_text: String,
     /// Quirks mode, approximated: set when the DOCTYPE is missing or its name is not `html`.
     pub quirks: bool,
+    /// The spec's `frameset-ok` flag: cleared by content that makes a later `<frameset>` invalid.
+    pub frameset_ok: bool,
     /// Fragment-parsing context element name, if any.
     pub context: Option<String>,
     depth_reported: bool,
@@ -202,6 +207,7 @@ impl TreeBuilder {
             foster_parenting: false,
             pending_table_text: String::new(),
             quirks: false,
+            frameset_ok: true,
             context: None,
             depth_reported: false,
         }
@@ -429,6 +435,9 @@ impl TreeBuilder {
                 Mode::InCell => self.in_cell(tok),
                 Mode::AfterBody => self.after_body(tok),
                 Mode::AfterAfterBody => self.after_after_body(tok),
+                Mode::InFrameset => self.in_frameset(tok),
+                Mode::AfterFrameset => self.after_frameset(tok),
+                Mode::AfterAfterFrameset => self.after_after_frameset(tok),
             };
             match next {
                 Some(t) => tok = t,
@@ -762,7 +771,7 @@ impl TreeBuilder {
                     None
                 }
                 "frameset" => {
-                    self.unsupported("frameset-not-implemented");
+                    self.head_frameset(&attrs);
                     None
                 }
                 "base" | "basefont" | "bgsound" | "link" | "meta" | "noframes" | "script"
