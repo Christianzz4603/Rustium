@@ -2,13 +2,12 @@
 //!
 //! A hand-written tokenizer following the HTML Living Standard's tokenization
 //! stage, restructured around helper functions instead of one state per enum
-//! variant. Implemented: data, RCDATA, RAWTEXT, script data (without the
-//! escaped/double-escaped sub-states), PLAINTEXT, tags, attributes, comments,
-//! bogus comments, DOCTYPE names, and character references.
+//! variant. Implemented: data, RCDATA, RAWTEXT, script data (including the
+//! escaped and double-escaped sub-states), PLAINTEXT, tags, attributes,
+//! comments, bogus comments, DOCTYPE names, and character references.
 //!
 //! Not implemented: DOCTYPE public/system identifiers (skipped, reported as
-//! `Unsupported`), CDATA sections in foreign content (no foreign content yet),
-//! and script-data escape states.
+//! `Unsupported`) and CDATA sections in foreign content (no foreign content yet).
 //!
 //! Input must already have CRLF/CR normalized to LF (see `lib.rs`).
 
@@ -440,8 +439,54 @@ impl<'a> Tokenizer<'a> {
         })
     }
 
+    /// Finds the end of script data, honoring the escaped (`<!--`) and
+    /// double-escaped (`<!-- <script`) states: `</script` only ends the element
+    /// outside double-escaped text. One linear pass.
+    fn find_script_end(&self) -> Option<usize> {
+        fn script_tag(b: &[u8]) -> bool {
+            b.len() > 6
+                && b[..6].eq_ignore_ascii_case(b"script")
+                && matches!(b[6], b' ' | b'\t' | b'\n' | 0x0c | b'/' | b'>')
+        }
+        let b = self.src.as_bytes();
+        let mut i = self.pos;
+        // 0 = script data, 1 = escaped, 2 = double escaped.
+        let mut state = 0u8;
+        while i < b.len() {
+            let rest = &b[i..];
+            match b[i] {
+                b'-' if state != 0 && rest.starts_with(b"-->") => {
+                    state = 0;
+                    i += 3;
+                }
+                b'<' if state == 0 && rest.starts_with(b"<!--") => {
+                    // Rescan from the first dash so `<!-->` and `<!--->` close at once.
+                    state = 1;
+                    i += 2;
+                }
+                b'<' if rest.starts_with(b"</") && script_tag(&rest[2..]) => {
+                    if state == 2 {
+                        state = 1;
+                        i += 8;
+                    } else {
+                        return Some(i);
+                    }
+                }
+                b'<' if state == 1 && script_tag(&rest[1..]) => {
+                    state = 2;
+                    i += 7;
+                }
+                _ => i += 1,
+            }
+        }
+        None
+    }
+
     /// Finds the byte index of the matching `</name` end tag in the remaining input.
     fn find_raw_end(&self, name: &str) -> Option<usize> {
+        if name == "script" {
+            return self.find_script_end();
+        }
         let src = self.src;
         let b = src.as_bytes();
         let mut i = self.pos;
@@ -450,8 +495,10 @@ impl<'a> Tokenizer<'a> {
             let after = at + 2 + name.len();
             if after <= b.len()
                 && src[at + 2..after].eq_ignore_ascii_case(name)
+                // EOF right after the name is not an end tag: the spec emits the
+                // partial `</name` as text.
                 && b.get(after)
-                    .is_none_or(|&c| is_ws(c) || c == b'/' || c == b'>')
+                    .is_some_and(|&c| is_ws(c) || c == b'/' || c == b'>')
             {
                 return Some(at);
             }
