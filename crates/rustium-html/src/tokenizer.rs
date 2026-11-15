@@ -350,7 +350,7 @@ impl<'a> Tokenizer<'a> {
     /// `pos` is at the first character of a tag name (an ASCII letter).
     fn lex_tag(&mut self, is_end: bool) -> Option<Token> {
         let raw_name = self.take_until(|b| is_ws(b) || b == b'/' || b == b'>');
-        let name = raw_name.to_ascii_lowercase().replace('\0', "\u{FFFD}");
+        let name = lower_name(raw_name);
         let mut attrs: Vec<(String, String)> = Vec::new();
         let mut self_closing = false;
         loop {
@@ -382,9 +382,7 @@ impl<'a> Tokenizer<'a> {
                 self.pos += 1;
             }
             self.take_until(|b| is_ws(b) || matches!(b, b'/' | b'>' | b'='));
-            let aname = self.src[name_start..self.pos]
-                .to_ascii_lowercase()
-                .replace('\0', "\u{FFFD}");
+            let aname = lower_name(&self.src[name_start..self.pos]);
             self.skip_ws();
             let mut value = String::new();
             if self.peek() == Some(b'=') {
@@ -551,4 +549,14 @@ pub fn tokenize(src: &str) -> Vec<Token> {
         }
         out.push(tok);
     }
+}
+
+/// ASCII-lowercases a tag or attribute name, replacing NUL with U+FFFD.
+/// Performs a single allocation (none of the extra `replace` copy).
+fn lower_name(raw: &str) -> String {
+    let mut out = raw.to_ascii_lowercase();
+    if out.contains('\0') {
+        out = out.replace('\0', "\u{FFFD}");
+    }
+    out
 }

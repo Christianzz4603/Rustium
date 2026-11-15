@@ -6,34 +6,210 @@
 use std::fmt;
 use std::rc::Rc;
 
+/// Common HTML element and attribute names, kept sorted for binary search.
+/// Atoms for these names borrow static data and never allocate.
+const STATIC_ATOMS: &[&str] = &[
+    "a",
+    "abbr",
+    "action",
+    "address",
+    "align",
+    "alt",
+    "area",
+    "article",
+    "aside",
+    "async",
+    "audio",
+    "b",
+    "base",
+    "big",
+    "blockquote",
+    "body",
+    "br",
+    "button",
+    "canvas",
+    "caption",
+    "charset",
+    "checked",
+    "class",
+    "code",
+    "col",
+    "colgroup",
+    "color",
+    "cols",
+    "content",
+    "data",
+    "dd",
+    "defer",
+    "details",
+    "dialog",
+    "disabled",
+    "div",
+    "dl",
+    "dt",
+    "em",
+    "embed",
+    "face",
+    "fieldset",
+    "figcaption",
+    "figure",
+    "font",
+    "footer",
+    "for",
+    "form",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "head",
+    "header",
+    "height",
+    "hidden",
+    "hr",
+    "href",
+    "html",
+    "http-equiv",
+    "i",
+    "id",
+    "iframe",
+    "img",
+    "input",
+    "label",
+    "lang",
+    "legend",
+    "li",
+    "link",
+    "main",
+    "media",
+    "menu",
+    "meta",
+    "method",
+    "name",
+    "nav",
+    "nobr",
+    "noscript",
+    "object",
+    "ol",
+    "optgroup",
+    "option",
+    "p",
+    "param",
+    "placeholder",
+    "pre",
+    "readonly",
+    "rel",
+    "rows",
+    "script",
+    "section",
+    "select",
+    "selected",
+    "size",
+    "small",
+    "source",
+    "span",
+    "src",
+    "strong",
+    "style",
+    "sub",
+    "summary",
+    "sup",
+    "svg",
+    "table",
+    "target",
+    "tbody",
+    "td",
+    "template",
+    "textarea",
+    "tfoot",
+    "th",
+    "thead",
+    "title",
+    "tr",
+    "type",
+    "u",
+    "ul",
+    "value",
+    "video",
+    "width",
+];
+
 /// A cheaply clonable, immutable string.
 ///
-/// This is a reference-counted string, not a global interner. Cloning is a
-/// pointer copy. A true interner is planned (see docs/ARCHITECTURE.md).
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
-pub struct Atom(Rc<str>);
+/// Common HTML names are borrowed from static data (no allocation); anything
+/// else is a reference-counted string. Cloning is a pointer copy either way.
+/// This is not a global interner; a true interner is planned (see
+/// docs/ARCHITECTURE.md). Equality, ordering and hashing are by string
+/// contents, so the two representations are interchangeable.
+#[derive(Clone)]
+pub struct Atom(Repr);
+
+#[derive(Clone)]
+enum Repr {
+    Static(&'static str),
+    Shared(Rc<str>),
+}
+
+impl Default for Atom {
+    fn default() -> Self {
+        Atom(Repr::Static(""))
+    }
+}
+
+impl PartialEq for Atom {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_str() == other.as_str()
+    }
+}
+
+impl Eq for Atom {}
+
+impl std::hash::Hash for Atom {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.as_str().hash(state);
+    }
+}
+
+impl PartialOrd for Atom {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Atom {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.as_str().cmp(other.as_str())
+    }
+}
 
 impl Atom {
-    /// Creates an atom from any string slice.
+    /// Creates an atom from any string slice. Common HTML names do not allocate.
     pub fn new(s: &str) -> Self {
-        Atom(Rc::from(s))
+        match STATIC_ATOMS.binary_search(&s) {
+            Ok(i) => Atom(Repr::Static(STATIC_ATOMS[i])),
+            Err(_) => Atom(Repr::Shared(Rc::from(s))),
+        }
     }
 
     /// Returns the string contents.
     pub fn as_str(&self) -> &str {
-        &self.0
+        match &self.0 {
+            Repr::Static(s) => s,
+            Repr::Shared(s) => s,
+        }
     }
 }
 
 impl fmt::Debug for Atom {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", &*self.0)
+        write!(f, "{:?}", self.as_str())
     }
 }
 
 impl fmt::Display for Atom {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0)
+        f.write_str(self.as_str())
     }
 }
 
@@ -45,13 +221,13 @@ impl From<&str> for Atom {
 
 impl PartialEq<str> for Atom {
     fn eq(&self, other: &str) -> bool {
-        &*self.0 == other
+        self.as_str() == other
     }
 }
 
 impl PartialEq<&str> for Atom {
     fn eq(&self, other: &&str) -> bool {
-        &*self.0 == *other
+        self.as_str() == *other
     }
 }
 
@@ -127,5 +303,31 @@ mod tests {
         assert_eq!(d.severity, Severity::ParseError);
         let u = Diagnostic::unsupported("y", Span::default());
         assert_eq!(u.severity, Severity::Unsupported);
+    }
+}
+
+#[cfg(test)]
+mod static_atom_tests {
+    use super::*;
+
+    #[test]
+    fn static_table_is_sorted_and_unique() {
+        assert!(STATIC_ATOMS.windows(2).all(|w| w[0] < w[1]));
+    }
+
+    #[test]
+    fn static_and_shared_atoms_are_equal_and_hash_alike() {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        let a = Atom::new("div");
+        let b = Atom(Repr::Shared(Rc::from("div")));
+        assert_eq!(a, b);
+        let h = |x: &Atom| {
+            let mut s = DefaultHasher::new();
+            x.hash(&mut s);
+            s.finish()
+        };
+        assert_eq!(h(&a), h(&b));
+        assert_eq!(Atom::new("custom-element"), "custom-element");
     }
 }
