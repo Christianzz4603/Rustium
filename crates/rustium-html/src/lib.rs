@@ -9,13 +9,15 @@
 //! ```
 //!
 //! Conformance status: this follows the HTML Living Standard's parsing
-//! algorithm for the modes listed in `tree_builder.rs`. It has **not** been run
-//! against html5lib-tests or Web Platform Tests, so no standards-compliance
-//! claim is made. Known gaps are reported as `Unsupported` diagnostics.
+//! algorithm for the modes listed in `tree_builder.rs`. Measured pass rates
+//! against the web-platform-tests html5lib vectors are in `docs/CONFORMANCE.md`
+//! (not 100%), so no standards-compliance claim is made. Known gaps are
+//! reported as `Unsupported` diagnostics where practical.
 
 mod entities;
 mod formatting;
 mod in_body;
+mod tables;
 mod token;
 mod tokenizer;
 mod tree_builder;
@@ -30,7 +32,7 @@ pub use token::{SpannedToken, Token};
 pub use tokenizer::{raw_kind_for, tokenize, RawKind, Tokenizer};
 pub use tree_builder::MAX_OPEN_DEPTH;
 
-use tree_builder::{Mode, TreeBuilder};
+use tree_builder::TreeBuilder;
 
 /// Parser configuration.
 #[derive(Debug, Clone, Copy)]
@@ -119,11 +121,8 @@ pub fn parse_fragment_with(input: &str, context: &str, opts: &ParseOptions) -> P
     let mut tb = TreeBuilder::new(Dom::new(), opts.scripting);
     tb.create_root_html(&[]);
     let html = tb.open[0];
-    tb.mode = if context == "html" {
-        Mode::BeforeHead
-    } else {
-        Mode::InBody
-    };
+    tb.context = Some(context.clone());
+    tb.reset_insertion_mode();
     let (mut dom, diagnostics) = run(&input, tb, tz);
     let frag = dom.create_fragment();
     let kids: Vec<NodeId> = dom.children(html).collect();

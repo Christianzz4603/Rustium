@@ -249,6 +249,24 @@ impl Dom {
         let _ = self.append_child(parent, t);
     }
 
+    /// Inserts text into `parent` before `reference` (or at the end if `None`),
+    /// merging with an adjacent preceding text node.
+    pub fn insert_text_before(&mut self, parent: NodeId, reference: Option<NodeId>, text: &str) {
+        let Some(r) = reference else {
+            self.append_text(parent, text);
+            return;
+        };
+        if let Some(prev) = self.node(r).prev_sibling {
+            if let NodeData::Text(t) = &mut self.node_mut(prev).data {
+                t.push_str(text);
+                self.record(Mutation::TextChanged { node: prev });
+                return;
+            }
+        }
+        let t = self.create_text(text);
+        let _ = self.insert_before(parent, t, Some(r));
+    }
+
     /// Gets an attribute value from an element.
     pub fn get_attribute(&self, el: NodeId, name: &str) -> Option<&str> {
         self.node(el).as_element()?.attr(name)
