@@ -274,3 +274,55 @@ fn tokenizer_never_panics_on_garbage() {
         let _ = tokenize(i);
     }
 }
+
+#[test]
+fn script_end_tag_at_eof_without_terminator_is_text() {
+    // Regression (html5lib tests16): `</script` followed by EOF is not an end tag.
+    assert_eq!(
+        tokenize("<script>a</script"),
+        vec![start("script", &[], false), text("a</script")]
+    );
+    // With whitespace after the name it is an end tag in progress; EOF drops it.
+    assert_eq!(
+        tokenize("<script>a</script "),
+        vec![start("script", &[], false), text("a")]
+    );
+}
+
+#[test]
+fn script_data_double_escape_hides_end_tag() {
+    assert_eq!(
+        tokenize("<script><!--<script></script>--></script>x"),
+        vec![
+            start("script", &[], false),
+            text("<!--<script></script>-->"),
+            end("script"),
+            text("x")
+        ]
+    );
+    // Escaped but not double-escaped: `</script>` ends the element.
+    assert_eq!(
+        tokenize("<script><!-- </script>x"),
+        vec![
+            start("script", &[], false),
+            text("<!-- "),
+            end("script"),
+            text("x")
+        ]
+    );
+}
+
+#[test]
+fn script_escape_open_closes_on_immediate_gt() {
+    // `<!-->` leaves the escaped state at once, so `<script>` here is plain text.
+    assert_eq!(
+        tokenize("<script><!--><script></script></script>"),
+        vec![
+            start("script", &[], false),
+            text("<!--><script>"),
+            end("script"),
+            // Back in the data state: a second `</script>` is an ordinary end tag.
+            end("script")
+        ]
+    );
+}
