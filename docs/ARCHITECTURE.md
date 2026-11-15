@@ -37,7 +37,7 @@ painting; style knows nothing about layout.
 
 | Crate | Responsibility | Depends on |
 |-------|----------------|-----------|
-| `rustium-common` | `Atom` (ref-counted string), `Span`, `Diagnostic`/`Severity` | none |
+| `rustium-common` | `Atom` (static or ref-counted string), `Span`, `Diagnostic`/`Severity` | none |
 | `rustium-dom` | Arena DOM: nodes, tree edits, attributes, traversal, simple queries, mutation records, serialization | common |
 | `rustium-html` | Tokenizer, character references, tree builder, document and fragment parsing | common, dom |
 | `rustium-core` | Facade for embedders (`Document::parse`); re-exports subsystem crates | common, dom, html |
@@ -94,7 +94,7 @@ to avoid empty crates (brief section 3).
 |---|----------|--------|
 | D1 | Arena DOM with `u32` ids instead of `Rc<RefCell>` | Made |
 | D2 | `unsafe` forbidden for now | Made |
-| D3 | Reference-counted `Atom` now; global interner later | Open: decide at Phase 2 when selector matching needs fast name compare |
+| D3 | `Atom` is a static-or-`Rc<str>` string (common HTML names do not allocate); global interner later | Open: decide at Phase 2 when selector matching needs fast name compare |
 | D4 | JS engine: own interpreter (Phase 7). A third-party Rust JS engine may be used temporarily; it must be documented here with a replacement plan | Open |
 | D5 | Multi-process vs. multi-thread isolation model | Open: decide before Phase 6; affects `rustium-security` and the embedder API |
 | D6 | Renderer trait boundary between display list and backends | Open: Phase 4 |
@@ -115,7 +115,7 @@ Each is reported at runtime as an `Unsupported` diagnostic where practical.
 - NUL in data state is dropped (the spec emits it and the tree builder ignores it; the visible result is the same).
 - Serializer escapes all text, including inside `<script>`/`<style>`; it is a debug aid, not the spec's fragment serialization algorithm.
 - DOM events, live collections, namespaces, shadow DOM, node reclamation: not implemented.
-- Measured against the WPT html5lib tree-construction vectors: 1311 of 1891 run pass (69.3%), 67 skipped. This is a measurement, not a compliance claim; see `docs/CONFORMANCE.md` for the failing areas. Correctness evidence also includes 102 hand-written tests and a seeded fuzz test that checks tree invariants.
+- Measured against the WPT html5lib tree-construction vectors: 1311 of 1891 run pass (69.3%), 67 skipped. This is a measurement, not a compliance claim; see `docs/CONFORMANCE.md` for the failing areas. Correctness evidence also includes 104 hand-written tests and a seeded fuzz test that checks tree invariants.
 
 ## 8. Testing strategy
 
