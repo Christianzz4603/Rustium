@@ -16,6 +16,7 @@
 
 mod entities;
 mod formatting;
+mod frameset;
 mod in_body;
 mod tables;
 mod token;
