@@ -1,12 +1,14 @@
 //! Tree construction: shared state, helpers, and the pre-body insertion modes.
 //!
 //! Implemented insertion modes: initial, before html, before head, in head,
-//! after head, in body, text, after body, after after body.
+//! after head, in body, text, the table family (in `tables.rs`), after body,
+//! after after body.
 //!
 //! NOT implemented (reported as `Unsupported` diagnostics where encountered):
-//! in table / in select / in frameset / in template modes (tables use a
-//! simplified rule set with no foster parenting and no implied `tbody`),
-//! foreign content (svg/math are plain elements), and quirks mode.
+//! in select / in frameset / in template modes, foreign
+//! content (svg/math are plain elements), and exact quirks-mode detection
+//! (the DOCTYPE name only is consulted, not its identifiers). The table mode
+//! family lives in `tables.rs`.
 
 use rustium_common::{Atom, Diagnostic, Severity, Span};
 use rustium_dom::{Dom, NodeData, NodeId};
@@ -24,9 +26,17 @@ pub(crate) enum Mode {
     BeforeHtml,
     BeforeHead,
     InHead,
+    InHeadNoscript,
     AfterHead,
     InBody,
     Text,
+    InTable,
+    InTableText,
+    InCaption,
+    InColumnGroup,
+    InTableBody,
+    InRow,
+    InCell,
     AfterBody,
     AfterAfterBody,
 }
@@ -163,6 +173,14 @@ pub(crate) struct TreeBuilder {
     pub span: Span,
     pub scripting: bool,
     pub after_head_pending_head: Option<NodeId>,
+    /// Foster parenting is active while processing "anything else" in a table mode.
+    pub foster_parenting: bool,
+    /// Character tokens collected by the "in table text" mode.
+    pub pending_table_text: String,
+    /// Quirks mode, approximated: set when the DOCTYPE is missing or its name is not `html`.
+    pub quirks: bool,
+    /// Fragment-parsing context element name, if any.
+    pub context: Option<String>,
     depth_reported: bool,
 }
 
@@ -181,6 +199,10 @@ impl TreeBuilder {
             span: Span::default(),
             scripting,
             after_head_pending_head: None,
+            foster_parenting: false,
+            pending_table_text: String::new(),
+            quirks: false,
+            context: None,
             depth_reported: false,
         }
     }
@@ -231,8 +253,8 @@ impl TreeBuilder {
     /// Creates an element, appends it at the insertion point, and pushes it on the stack.
     pub fn insert_element(&mut self, name: &str, attrs: &[(String, String)]) -> NodeId {
         let id = self.create_element(name, attrs);
-        let parent = self.current();
-        let _ = self.dom.append_child(parent, id);
+        let (parent, before) = self.appropriate_place(None);
+        let _ = self.dom.insert_before(parent, id, before);
         if self.open.len() < MAX_OPEN_DEPTH {
             self.open.push(id);
         } else if !self.depth_reported {
@@ -246,17 +268,47 @@ impl TreeBuilder {
         if s.is_empty() {
             return;
         }
-        let parent = self.current();
+        let (parent, before) = self.appropriate_place(None);
         if parent == self.dom.document() {
             return; // text is never a child of Document
         }
-        self.dom.append_text(parent, s);
+        self.dom.insert_text_before(parent, before, s);
+    }
+
+    /// The spec's "appropriate place for inserting a node": the current node,
+    /// or, while foster parenting is active and the target is a table part,
+    /// just before the last open `<table>` (or inside the element above it).
+    /// `<template>` handling is not implemented.
+    pub fn appropriate_place(&self, target: Option<NodeId>) -> (NodeId, Option<NodeId>) {
+        let target = target.unwrap_or_else(|| self.current());
+        if self.foster_parenting
+            && matches!(
+                self.name(target).as_str(),
+                "table" | "tbody" | "tfoot" | "thead" | "tr"
+            )
+        {
+            return match self.open.iter().rposition(|&n| self.is(n, "table")) {
+                Some(pos) => {
+                    let table = self.open[pos];
+                    match self.dom.node(table).parent {
+                        Some(parent) => (parent, Some(table)),
+                        None if pos > 0 => (self.open[pos - 1], None),
+                        None => (self.current(), None),
+                    }
+                }
+                None => (self.open.first().copied().unwrap_or(target), None),
+            };
+        }
+        (target, None)
     }
 
     pub fn insert_comment(&mut self, s: &str, parent: Option<NodeId>) {
-        let parent = parent.unwrap_or_else(|| self.current());
+        let (parent, before) = match parent {
+            Some(p) => (p, None),
+            None => self.appropriate_place(None),
+        };
         let c = self.dom.create_comment(s);
-        let _ = self.dom.append_child(parent, c);
+        let _ = self.dom.insert_before(parent, c, before);
     }
 
     pub fn pop(&mut self) {
@@ -364,9 +416,17 @@ impl TreeBuilder {
                 Mode::BeforeHtml => self.before_html(tok),
                 Mode::BeforeHead => self.before_head(tok),
                 Mode::InHead => self.in_head(tok),
+                Mode::InHeadNoscript => self.in_head_noscript(tok),
                 Mode::AfterHead => self.after_head(tok),
                 Mode::InBody => self.in_body(tok),
                 Mode::Text => self.text_mode(tok),
+                Mode::InTable => self.in_table(tok),
+                Mode::InTableText => self.in_table_text(tok),
+                Mode::InCaption => self.in_caption(tok),
+                Mode::InColumnGroup => self.in_column_group(tok),
+                Mode::InTableBody => self.in_table_body(tok),
+                Mode::InRow => self.in_row(tok),
+                Mode::InCell => self.in_cell(tok),
                 Mode::AfterBody => self.after_body(tok),
                 Mode::AfterAfterBody => self.after_after_body(tok),
             };
@@ -388,6 +448,7 @@ impl TreeBuilder {
                 }
                 let rest = rest.to_string();
                 self.error("missing-doctype");
+                self.quirks = true;
                 self.mode = Mode::BeforeHtml;
                 Some(Token::Character(rest))
             }
@@ -400,12 +461,15 @@ impl TreeBuilder {
                 let d = self.dom.create_doctype(name.as_deref().unwrap_or(""));
                 let doc = self.dom.document();
                 let _ = self.dom.append_child(doc, d);
-                self.unsupported("quirks-mode-not-implemented");
+                // Approximation: public/system identifiers are not consulted.
+                self.quirks = name.as_deref() != Some("html");
+                self.unsupported("quirks-mode-from-doctype-identifiers");
                 self.mode = Mode::BeforeHtml;
                 None
             }
             other => {
                 self.error("missing-doctype");
+                self.quirks = true;
                 self.mode = Mode::BeforeHtml;
                 Some(other)
             }
@@ -555,8 +619,8 @@ impl TreeBuilder {
                     None
                 }
                 "noscript" => {
-                    self.unsupported("noscript-in-head-without-scripting");
                     self.insert_element(&name, &attrs);
+                    self.mode = Mode::InHeadNoscript;
                     None
                 }
                 "template" => {
@@ -609,6 +673,57 @@ impl TreeBuilder {
                 Some(Token::Eof)
             }
         }
+    }
+
+    /// "In head noscript": only reached when scripting is disabled.
+    fn in_head_noscript(&mut self, tok: Token) -> Option<Token> {
+        match &tok {
+            Token::Doctype { .. } => {
+                self.error("unexpected-doctype");
+                None
+            }
+            Token::Comment(_) => self.in_head(tok),
+            Token::Character(s) => {
+                let (ws, rest) = split_leading_ws(s);
+                if rest.is_empty() {
+                    return self.in_head(tok);
+                }
+                self.insert_text(ws);
+                let rest = Token::Character(rest.to_string());
+                self.leave_head_noscript(rest)
+            }
+            Token::StartTag { name, .. } => match name.as_str() {
+                "html" => self.in_body(tok),
+                "basefont" | "bgsound" | "link" | "meta" | "noframes" | "style" => {
+                    self.in_head(tok)
+                }
+                "head" | "noscript" => {
+                    self.error("unexpected-start-tag");
+                    None
+                }
+                _ => self.leave_head_noscript(tok),
+            },
+            Token::EndTag { name } => match name.as_str() {
+                "noscript" => {
+                    self.pop();
+                    self.mode = Mode::InHead;
+                    None
+                }
+                "br" => self.leave_head_noscript(tok),
+                _ => {
+                    self.error("unexpected-end-tag");
+                    None
+                }
+            },
+            Token::Eof => self.leave_head_noscript(tok),
+        }
+    }
+
+    fn leave_head_noscript(&mut self, tok: Token) -> Option<Token> {
+        self.error("unexpected-token-in-head-noscript");
+        self.pop();
+        self.mode = Mode::InHead;
+        Some(tok)
     }
 
     fn after_head(&mut self, tok: Token) -> Option<Token> {
