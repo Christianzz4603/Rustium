@@ -294,32 +294,74 @@ fn unclosed_formatting_at_eof() {
     assert_eq!(body("<p>1<b>2<i>3"), "<p>1<b>2<i>3</i></b></p>");
 }
 
-// ---------- tables (simplified) ----------
+// ---------- tables ----------
 
 #[test]
-fn simplified_table_structure() {
+fn table_structure_has_implied_tbody() {
     assert_eq!(
         body("<table><tr><td>a<td>b<tr><td>c</table>x"),
-        "<table><tr><td>a</td><td>b</td></tr><tr><td>c</td></tr></table>x"
+        "<table><tbody><tr><td>a</td><td>b</td></tr><tr><td>c</td></tr></tbody></table>x"
     );
 }
 
 #[test]
-fn table_reports_unsupported_diagnostic() {
-    let r = parse_document("<table><tr><td>a</table>");
-    assert!(r
-        .diagnostics
-        .iter()
-        .any(|d| d.severity == Severity::Unsupported
-            && d.code == "table-simplified-tree-construction"));
+fn stray_text_in_table_is_foster_parented_before_the_table() {
+    assert_eq!(
+        body("<table>x<tr><td>a</table>"),
+        "x<table><tbody><tr><td>a</td></tr></tbody></table>"
+    );
+    // Whitespace stays inside the table.
+    assert_eq!(
+        body("<table> <tr></table>"),
+        "<table> <tbody><tr></tr></tbody></table>"
+    );
+}
+
+#[test]
+fn stray_elements_in_table_are_foster_parented() {
+    assert_eq!(
+        body("<table><div>d</div><tr><td>a</table>"),
+        "<div>d</div><table><tbody><tr><td>a</td></tr></tbody></table>"
+    );
 }
 
 #[test]
 fn table_formatting_does_not_leak_out_of_cells() {
     assert_eq!(
         body("<table><tr><td><b>a</table>c"),
-        "<table><tr><td><b>a</b></td></tr></table>c"
+        "<table><tbody><tr><td><b>a</b></td></tr></tbody></table>c"
     );
+}
+
+#[test]
+fn caption_and_colgroup() {
+    assert_eq!(
+        body("<table><caption>c<col><tr><td>a</table>"),
+        "<table><caption>c</caption><colgroup><col></colgroup><tbody><tr><td>a</td></tr></tbody></table>"
+    );
+}
+
+#[test]
+fn nested_table_in_cell_closes_nothing_outer() {
+    assert_eq!(
+        body("<table><tr><td><table><tr><td>i</table>o</table>"),
+        "<table><tbody><tr><td><table><tbody><tr><td>i</td></tr></tbody></table>o</td></tr></tbody></table>"
+    );
+}
+
+#[test]
+fn table_start_tag_closes_paragraph_only_in_no_quirks_mode() {
+    // No DOCTYPE: quirks mode, the paragraph stays open.
+    assert_eq!(body("<p>a<table>"), "<p>a<table></table></p>");
+    assert_eq!(
+        doc("<!DOCTYPE html><p>a<table>"),
+        "<!DOCTYPE html><html><head></head><body><p>a</p><table></table></body></html>"
+    );
+}
+
+#[test]
+fn table_parts_outside_tables_are_ignored() {
+    assert_eq!(body("a<td>b<tr>c<caption>d"), "abcd");
 }
 
 // ---------- fragments ----------
