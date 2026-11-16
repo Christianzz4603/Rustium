@@ -35,9 +35,12 @@ WPT commit `fa649586f35119af9032312ef21e300e41d1c3b6`.
 | Table mode family + foster parenting + quirks approximation | 1221 / 1891 | 64.6% | 67 |
 | In head noscript | 1247 / 1891 | 65.9% | 67 |
 | Script-data escape states, `</script` at EOF | 1311 / 1891 | 69.3% | 67 |
+| Frameset modes + `frameset-ok` | 1376 / 1891 | 72.8% | 67 |
 
-Fully passing files include `tests16`, `scriptdata01`, `noscript01`, `blocks`,
-`comments01`, `inbody01`, `isindex`, `menuitem-element`, `ruby`, `void-in-phrasing`.
+Files where every run vector passes: `blocks`, `comments01`, `inbody01`, `isindex`,
+`menuitem-element`, `noscript01`, `ruby`, `scriptdata01`, `tests3`, `tests5`, `tests8`,
+`tests14`, `tests15`, `tests16`, `tests17`, `tests22`, `tests23`, `tests25`, `tricky01`,
+`void-in-phrasing`, `pending-spec-changes-plain-text-unsafe`.
 
 ## Remaining failures, by cause
 
@@ -48,8 +51,8 @@ Fully passing files include `tests16`, `scriptdata01`, `noscript01`, `blocks`,
 | Foreign content (svg, math, namespaced attributes, integration points) | tests9 (27), tests10 (54), tests11, tests19 (part), tests24, svg, math |
 | DOCTYPE public/system identifiers and exact quirks mode | doctype01 (16), quirks01, parts of others |
 | In select | parts of tests1, tests2, webkit, tests_innerHTML_1 |
-| `plain-text-unsafe`, `domjs-unsafe`, `tests21`, `webkit02`, `tests6/18/20/26` | not yet triaged |
+| `tests21`, `domjs-unsafe`, most of `plain-text-unsafe`, `webkit02`, `tests20`, `tests26` | triaged by sampling: SVG/MathML foreign content (including `<![CDATA[`), so they are covered by the foreign-content row |
 
-The last row is unexamined: causes are not known yet and are not guessed here.
+Triage was done by reading the first failures of each file, not every failure; some failures in these files may have other causes.
 
 Update this file whenever the runner's total changes, with the WPT commit used.

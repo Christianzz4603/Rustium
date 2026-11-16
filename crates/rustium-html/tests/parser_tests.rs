@@ -364,6 +364,62 @@ fn table_parts_outside_tables_are_ignored() {
     assert_eq!(body("a<td>b<tr>c<caption>d"), "abcd");
 }
 
+// ---------- framesets ----------
+
+#[test]
+fn frameset_replaces_body() {
+    assert_eq!(
+        doc("<frameset cols=1><frame src=a></frameset>"),
+        "<html><head></head><frameset cols=\"1\"><frame src=\"a\"></frameset></html>"
+    );
+    // The implied body is dropped when nothing has made frameset-ok false.
+    assert_eq!(
+        doc("<body><frameset></frameset>"),
+        "<html><head></head><frameset></frameset></html>"
+    );
+}
+
+#[test]
+fn frameset_is_ignored_after_content() {
+    assert_eq!(
+        doc("<body>x<frameset>"),
+        "<html><head></head><body>x</body></html>"
+    );
+    assert_eq!(
+        doc("<body><br><frameset>"),
+        "<html><head></head><body><br></body></html>"
+    );
+}
+
+#[test]
+fn text_in_frameset_is_dropped_but_whitespace_kept() {
+    assert_eq!(
+        doc("<frameset>a <frame>b</frameset> c<!--x-->"),
+        "<html><head></head><frameset> <frame></frameset> <!--x--></html>"
+    );
+}
+
+#[test]
+fn noframes_in_frameset_is_raw_text() {
+    assert_eq!(
+        doc("<frameset><noframes><b>x</noframes></frameset>"),
+        "<html><head></head><frameset><noframes>&lt;b&gt;x</noframes></frameset></html>"
+    );
+}
+
+#[test]
+fn nested_framesets() {
+    assert_eq!(
+        doc("<frameset><frameset><frame></frameset><frame></frameset>"),
+        "<html><head></head><frameset><frameset><frame></frameset><frame></frameset></html>"
+    );
+}
+
+#[test]
+fn stray_frame_in_body_is_ignored() {
+    assert_eq!(body("a<frame>b"), "ab");
+}
+
 // ---------- fragments ----------
 
 #[test]

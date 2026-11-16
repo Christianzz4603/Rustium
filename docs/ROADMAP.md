@@ -9,9 +9,9 @@ Done:
 - [x] `rustium-common`, `rustium-dom`, `rustium-html`, `rustium-core`
 - [x] Tokenizer, character references (subset), tree builder, adoption agency
 - [x] Fragment parsing, parse diagnostics, depth and formatting-list limits
-- [x] 104 tests including seeded fuzzing
-- [x] html5lib tree-construction runner (`tools/html5lib-runner`); 69.3% of 1891 vectors pass (see CONFORMANCE.md)
-- [x] Table insertion modes with foster parenting; in head noscript; script-data escape states
+- [x] 110 tests including seeded fuzzing
+- [x] html5lib tree-construction runner (`tools/html5lib-runner`); 72.8% of 1891 vectors pass (see CONFORMANCE.md)
+- [x] Table insertion modes with foster parenting; in head noscript; script-data escape states; frameset modes
 
 Remaining before Phase 1 is closed:
 - [ ] Tokenizer vectors (`.test` JSON) in the runner; keep pass rates published as they move

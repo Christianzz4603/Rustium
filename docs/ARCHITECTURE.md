@@ -107,7 +107,7 @@ to avoid empty crates (brief section 3).
 Each is reported at runtime as an `Unsupported` diagnostic where practical.
 
 - Table modes (in table, table text, caption, column group, table body, row, cell) and foster parenting follow the spec, but `<template>` interactions and the select-in-table modes are not implemented.
-- No "in select", "in frameset", or "in template" modes. `<template>` has no content fragment; `<frameset>` is dropped.
+- No "in select" or "in template" modes. `<template>` has no content fragment. The frameset modes and the `frameset-ok` flag are implemented (`frameset.rs`); `frameset-ok` is cleared by an explicit list of start tags and by non-whitespace text.
 - No foreign content: `<svg>` and `<math>` are plain HTML elements.
 - Quirks mode is approximated: a missing DOCTYPE or a DOCTYPE name other than `html` means quirks. Public/system identifiers are not parsed, so DOCTYPEs with legacy identifiers are misclassified. Quirks mode currently only affects whether `<table>` closes an open `<p>`.
 - Named character references: about 80 of 2,231.
@@ -115,7 +115,7 @@ Each is reported at runtime as an `Unsupported` diagnostic where practical.
 - NUL in data state is dropped (the spec emits it and the tree builder ignores it; the visible result is the same).
 - Serializer escapes all text, including inside `<script>`/`<style>`; it is a debug aid, not the spec's fragment serialization algorithm.
 - DOM events, live collections, namespaces, shadow DOM, node reclamation: not implemented.
-- Measured against the WPT html5lib tree-construction vectors: 1311 of 1891 run pass (69.3%), 67 skipped. This is a measurement, not a compliance claim; see `docs/CONFORMANCE.md` for the failing areas. Correctness evidence also includes 104 hand-written tests and a seeded fuzz test that checks tree invariants.
+- Measured against the WPT html5lib tree-construction vectors: 1376 of 1891 run pass (72.8%), 67 skipped. This is a measurement, not a compliance claim; see `docs/CONFORMANCE.md` for the failing areas. Correctness evidence also includes 110 hand-written tests and a seeded fuzz test that checks tree invariants.
 
 ## 8. Testing strategy
 

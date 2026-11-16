@@ -22,7 +22,7 @@ What does **not** exist yet: CSS, style, layout, painting, networking, JavaScrip
 WebAssembly, security boundaries. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 **No standards-compliance claim is made.** Measured against the web-platform-tests
-html5lib tree-construction vectors, 69.3% pass (1311 of 1891 run, 67 skipped);
+html5lib tree-construction vectors, 72.8% pass (1376 of 1891 run, 67 skipped);
 see [docs/CONFORMANCE.md](docs/CONFORMANCE.md) and the known limitations in
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
