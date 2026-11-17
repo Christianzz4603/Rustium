@@ -326,7 +326,18 @@ impl<'a> Tokenizer<'a> {
                 self.pos += rest.len();
                 self.diag("eof-in-comment");
                 self.pos -= rest.len();
-                (rest, rest.len())
+                // At EOF the spec's end-dash/end/end-bang states have not yet
+                // appended their pending `-`, `--` or `--!` to the comment.
+                let keep = if rest.ends_with("--!") {
+                    rest.len() - 3
+                } else if rest.ends_with("--") {
+                    rest.len() - 2
+                } else if rest.ends_with('-') {
+                    rest.len() - 1
+                } else {
+                    rest.len()
+                };
+                (&rest[..keep], rest.len())
             }
         };
         self.pos += advance;

@@ -373,3 +373,16 @@ fn script_escape_open_closes_on_immediate_gt() {
         ]
     );
 }
+
+#[test]
+fn eof_in_comment_drops_pending_dashes() {
+    // The spec's end-dash / end / end-bang states have not appended their
+    // pending characters to the comment when the input ends.
+    let c = |s: &str| vec![Token::Comment(s.into())];
+    assert_eq!(tokenize("<!-- a -"), c(" a "));
+    assert_eq!(tokenize("<!-- a --"), c(" a "));
+    assert_eq!(tokenize("<!-- a --!"), c(" a "));
+    assert_eq!(tokenize("<!---"), c(""));
+    assert_eq!(tokenize("<!-----"), c("-"));
+    assert_eq!(tokenize("<!-- a"), c(" a"));
+}

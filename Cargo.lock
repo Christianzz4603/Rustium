@@ -45,3 +45,10 @@ dependencies = [
  "rustium-common",
  "rustium-dom",
 ]
+
+[[package]]
+name = "tokenizer-runner"
+version = "0.1.0"
+dependencies = [
+ "rustium-html",
+]

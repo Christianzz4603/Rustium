@@ -1,0 +1,14 @@
+[package]
+name = "tokenizer-runner"
+description = "Runs html5lib-format tokenizer .test vectors against rustium-html and reports pass rates"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+rustium-html = { path = "../../crates/rustium-html" }
+
+[lints]
+workspace = true
