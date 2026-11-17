@@ -29,6 +29,7 @@ const STATIC_ATOMS: &[&str] = &[
     "button",
     "canvas",
     "caption",
+    "center",
     "charset",
     "checked",
     "class",
@@ -37,12 +38,14 @@ const STATIC_ATOMS: &[&str] = &[
     "colgroup",
     "color",
     "cols",
+    "colspan",
     "content",
     "data",
     "dd",
     "defer",
     "details",
     "dialog",
+    "dir",
     "disabled",
     "div",
     "dl",
@@ -82,6 +85,7 @@ const STATIC_ATOMS: &[&str] = &[
     "li",
     "link",
     "main",
+    "math",
     "media",
     "menu",
     "meta",
@@ -101,6 +105,8 @@ const STATIC_ATOMS: &[&str] = &[
     "readonly",
     "rel",
     "rows",
+    "rowspan",
+    "s",
     "script",
     "section",
     "select",
@@ -127,6 +133,8 @@ const STATIC_ATOMS: &[&str] = &[
     "thead",
     "title",
     "tr",
+    "track",
+    "tt",
     "type",
     "u",
     "ul",
@@ -183,11 +191,34 @@ impl Ord for Atom {
     }
 }
 
+/// `ATOM_BUCKETS[b]..ATOM_BUCKETS[b + 1]` is the range of `STATIC_ATOMS` whose
+/// first byte is `b`. Computed at compile time from the sorted table.
+const ATOM_BUCKETS: [u8; 257] = {
+    let mut t = [0u8; 257];
+    let mut i = 0;
+    let mut b = 0;
+    while b <= 256 {
+        // Advance i to the first entry whose first byte is >= b.
+        while i < STATIC_ATOMS.len() && (STATIC_ATOMS[i].as_bytes()[0] as usize) < b {
+            i += 1;
+        }
+        t[b] = i as u8;
+        b += 1;
+    }
+    t
+};
+
 impl Atom {
     /// Creates an atom from any string slice. Common HTML names do not allocate.
     pub fn new(s: &str) -> Self {
-        match STATIC_ATOMS.binary_search(&s) {
-            Ok(i) => Atom(Repr::Static(STATIC_ATOMS[i])),
+        // Narrow the binary search to the names sharing the first byte.
+        let Some(&first) = s.as_bytes().first() else {
+            return Atom(Repr::Shared(Rc::from(s)));
+        };
+        let lo = ATOM_BUCKETS[first as usize] as usize;
+        let hi = ATOM_BUCKETS[first as usize + 1] as usize;
+        match STATIC_ATOMS[lo..hi].binary_search(&s) {
+            Ok(i) => Atom(Repr::Static(STATIC_ATOMS[lo + i])),
             Err(_) => Atom(Repr::Shared(Rc::from(s))),
         }
     }
@@ -313,6 +344,16 @@ mod static_atom_tests {
     #[test]
     fn static_table_is_sorted_and_unique() {
         assert!(STATIC_ATOMS.windows(2).all(|w| w[0] < w[1]));
+    }
+
+    #[test]
+    fn every_static_name_is_found_without_allocating() {
+        for name in STATIC_ATOMS {
+            assert!(matches!(Atom::new(name).0, Repr::Static(_)), "{name}");
+        }
+        for name in ["", "zzz", "Div", "\u{e9}t\u{e9}", "custom-element"] {
+            assert!(matches!(Atom::new(name).0, Repr::Shared(_)), "{name}");
+        }
     }
 
     #[test]

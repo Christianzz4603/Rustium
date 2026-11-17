@@ -115,7 +115,7 @@ Each is reported at runtime as an `Unsupported` diagnostic where practical.
 - NUL in data state is dropped (the spec emits it and the tree builder ignores it; the visible result is the same).
 - Serializer escapes all text, including inside `<script>`/`<style>`; it is a debug aid, not the spec's fragment serialization algorithm.
 - DOM events, live collections, namespaces, shadow DOM, node reclamation: not implemented.
-- Measured against the WPT html5lib tree-construction vectors: 1430 of 1891 run pass (75.6%), 67 skipped; the html5lib tokenizer vectors pass 6951 of 6980 run (99.6%), 66 skipped. This is a measurement, not a compliance claim; see `docs/CONFORMANCE.md` for the failing areas. Correctness evidence also includes 124 hand-written tests and a seeded fuzz test that checks tree invariants.
+- Measured against the WPT html5lib tree-construction vectors: 1430 of 1891 run pass (75.6%), 67 skipped; the html5lib tokenizer vectors pass 6951 of 6980 run (99.6%), 66 skipped. This is a measurement, not a compliance claim; see `docs/CONFORMANCE.md` for the failing areas. Correctness evidence also includes 125 hand-written tests and a seeded fuzz test that checks tree invariants.
 
 ## 8. Testing strategy
 

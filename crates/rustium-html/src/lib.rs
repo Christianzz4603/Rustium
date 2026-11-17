@@ -98,7 +98,12 @@ pub fn parse_document(input: &str) -> ParseResult {
 pub fn parse_document_with(input: &str, opts: &ParseOptions) -> ParseResult {
     let input = normalize_newlines(input);
     let tz = Tokenizer::new(&input, opts.scripting);
-    let tb = TreeBuilder::new(Dom::new(), opts.scripting);
+    // Rough node-count guess (about one node per 24 bytes), capped so a huge
+    // input cannot force one giant up-front allocation.
+    let tb = TreeBuilder::new(
+        Dom::with_capacity((input.len() / 24).min(1 << 16)),
+        opts.scripting,
+    );
     let (dom, diagnostics) = run(&input, tb, tz);
     let root = dom.document();
     ParseResult {

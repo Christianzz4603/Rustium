@@ -9,7 +9,7 @@ Done:
 - [x] `rustium-common`, `rustium-dom`, `rustium-html`, `rustium-core`
 - [x] Tokenizer, character references (subset), tree builder, adoption agency
 - [x] Fragment parsing, parse diagnostics, depth and formatting-list limits
-- [x] 124 tests including seeded fuzzing
+- [x] 125 tests including seeded fuzzing
 - [x] html5lib tree-construction runner (`tools/html5lib-runner`); 75.6% of 1891 vectors pass (see CONFORMANCE.md)
 - [x] Table insertion modes with foster parenting; in head noscript; script-data escape states; frameset modes; DOCTYPE identifiers and quirks mode; full named character reference table
 

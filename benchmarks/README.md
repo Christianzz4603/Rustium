@@ -67,6 +67,19 @@ Wall-clock throughput on this run read about 30 MB/s, but the sandbox was also
 slower for the same code than in earlier sessions, so wall-clock numbers are not
 comparable across sessions; trust only the instruction counts within one method.
 
+## After the select modes, and a first-byte atom lookup
+
+Same workload and method: 94.8M instructions, down from 102.8M (-7.8%) with the select
+modes in. Two changes: `Atom::new` now binary-searches only the names that share the
+input's first byte (the bucket table is computed at compile time), and `parse_document`
+reserves node capacity up front (about one node per 24 bytes of input, capped at 65,536
+nodes). Adding 8 more static names (`s`, `tt`, `center`, `track`, `math`, `dir`,
+`colspan`, `rowspan`) was worth about 0.1M. That is about 1.2% below the 95.9M reading before
+frameset modes, DOCTYPE parsing and the full entity table were added. Still an instruction
+count on one workload, not a throughput claim and not a comparison with any other engine.
+Biggest remaining costs: malloc/free (about 20%), per-token `String` allocation, and text
+node creation.
+
 ## Not measured yet
 
 Peak memory, startup of a full engine, CSS parsing, style, layout, paint,

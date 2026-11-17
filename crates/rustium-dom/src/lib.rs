@@ -45,6 +45,13 @@ impl Dom {
         }
     }
 
+    /// Like [`Dom::new`], reserving room for about `nodes` nodes up front.
+    pub fn with_capacity(nodes: usize) -> Self {
+        let mut dom = Self::new();
+        dom.nodes.reserve(nodes);
+        dom
+    }
+
     /// The Document node.
     pub fn document(&self) -> NodeId {
         self.root
