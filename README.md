@@ -59,4 +59,7 @@ The engine currently has no third-party dependencies.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Free to use, modify and distribute under the [Rustium License](LICENSE), an MIT-based license with two
+added terms: products built on Rustium must credit the author (Christianzz4603), and the author is not
+responsible for what others build with it. This is a plain-language summary, not legal advice; the
+LICENSE text is what applies.

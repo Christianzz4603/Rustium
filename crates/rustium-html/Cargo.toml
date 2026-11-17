@@ -3,7 +3,7 @@ name = "rustium-html"
 description = "HTML tokenizer and tree builder for the Rustium browser engine"
 version.workspace = true
 edition.workspace = true
-license.workspace = true
+license-file.workspace = true
 rust-version.workspace = true
 
 [dependencies]

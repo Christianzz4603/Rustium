@@ -3,7 +3,7 @@ name = "html5lib-runner"
 description = "Runs html5lib-format tree-construction vectors against rustium-html and reports pass rates"
 version.workspace = true
 edition.workspace = true
-license.workspace = true
+license-file.workspace = true
 rust-version.workspace = true
 publish = false
 
