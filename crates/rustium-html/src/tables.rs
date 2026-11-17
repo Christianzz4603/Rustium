@@ -3,7 +3,7 @@
 //! (see `TreeBuilder::appropriate_place`) and "reset the insertion mode".
 //!
 //! Not implemented: `<template>` interactions (template contexts, template
-//! contents), and the select modes that the spec reaches from "in table".
+//! contents). The select modes live in `select.rs`.
 
 use crate::token::Token;
 use crate::tree_builder::{split_leading_ws, Mode, Scope, TreeBuilder};
@@ -24,7 +24,7 @@ impl TreeBuilder {
         }
     }
 
-    /// "Reset the insertion mode appropriately" (select and template cases omitted).
+    /// "Reset the insertion mode appropriately" (template case omitted).
     pub(crate) fn reset_insertion_mode(&mut self) {
         for i in (0..self.open.len()).rev() {
             let last = i == 0;
@@ -33,6 +33,23 @@ impl TreeBuilder {
                 _ => self.name(self.open[i]).to_string(),
             };
             let mode = match name.as_str() {
+                "select" => {
+                    // Inside a table (not stopped by a template): in select in table.
+                    let mut m = Mode::InSelect;
+                    if !last {
+                        for j in (0..i).rev() {
+                            match self.name(self.open[j]).as_str() {
+                                "template" => break,
+                                "table" => {
+                                    m = Mode::InSelectInTable;
+                                    break;
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                    m
+                }
                 "td" | "th" if !last => Mode::InCell,
                 "tr" => Mode::InRow,
                 "tbody" | "thead" | "tfoot" => Mode::InTableBody,

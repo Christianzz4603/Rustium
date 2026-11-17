@@ -20,6 +20,7 @@ mod formatting;
 mod frameset;
 mod in_body;
 mod quirks;
+mod select;
 mod tables;
 mod token;
 mod tokenizer;

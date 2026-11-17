@@ -106,8 +106,8 @@ to avoid empty crates (brief section 3).
 
 Each is reported at runtime as an `Unsupported` diagnostic where practical.
 
-- Table modes (in table, table text, caption, column group, table body, row, cell) and foster parenting follow the spec, but `<template>` interactions and the select-in-table modes are not implemented.
-- No "in select" or "in template" modes. `<template>` has no content fragment. The frameset modes and the `frameset-ok` flag are implemented (`frameset.rs`); `frameset-ok` is cleared by an explicit list of start tags and by non-whitespace text.
+- Table modes (in table, table text, caption, column group, table body, row, cell) and foster parenting follow the spec, but `<template>` interactions are not implemented.
+- The "in select" and "in select in table" modes exist (`select.rs`) but were fitted against the WPT vectors, not copied from the live spec text, which was not reachable; other start/end tags inside `<select>` go through the in-body rules. No "in template" mode: `<template>` has no content fragment. The frameset modes and the `frameset-ok` flag are implemented (`frameset.rs`); `frameset-ok` is cleared by an explicit list of start tags and by non-whitespace text.
 - No foreign content: `<svg>` and `<math>` are plain HTML elements.
 - Quirks mode follows the spec's DOCTYPE rules (`quirks.rs`), but limited-quirks mode is not distinguished from no-quirks because it only affects layout. In the parser, quirks mode only affects whether `<table>` closes an open `<p>`. Fragment parsing does not take a quirks mode from the context.
 - Named character references: the full table (2,125 names; 106 legacy names also work without `;`) is generated from html5lib-tests `namedEntities.test` into `entity_table.rs`. It is not re-verified against the WHATWG `entities.json` directly.
@@ -115,7 +115,7 @@ Each is reported at runtime as an `Unsupported` diagnostic where practical.
 - NUL in data state is dropped (the spec emits it and the tree builder ignores it; the visible result is the same).
 - Serializer escapes all text, including inside `<script>`/`<style>`; it is a debug aid, not the spec's fragment serialization algorithm.
 - DOM events, live collections, namespaces, shadow DOM, node reclamation: not implemented.
-- Measured against the WPT html5lib tree-construction vectors: 1415 of 1891 run pass (74.8%), 67 skipped; the html5lib tokenizer vectors pass 6951 of 6980 run (99.6%), 66 skipped. This is a measurement, not a compliance claim; see `docs/CONFORMANCE.md` for the failing areas. Correctness evidence also includes 120 hand-written tests and a seeded fuzz test that checks tree invariants.
+- Measured against the WPT html5lib tree-construction vectors: 1430 of 1891 run pass (75.6%), 67 skipped; the html5lib tokenizer vectors pass 6951 of 6980 run (99.6%), 66 skipped. This is a measurement, not a compliance claim; see `docs/CONFORMANCE.md` for the failing areas. Correctness evidence also includes 124 hand-written tests and a seeded fuzz test that checks tree invariants.
 
 ## 8. Testing strategy
 

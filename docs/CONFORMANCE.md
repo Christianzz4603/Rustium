@@ -39,12 +39,13 @@ WPT commit `fa649586f35119af9032312ef21e300e41d1c3b6`.
 | DOCTYPE public/system identifiers + spec quirks detection | 1397 / 1891 | 73.9% | 67 |
 | Full named character reference table | 1414 / 1891 | 74.8% | 67 |
 | EOF-in-comment drops pending dashes (tokenizer-runner finding) | 1415 / 1891 | 74.8% | 67 |
+| In select / in select in table (fitted to vectors) | 1430 / 1891 | 75.6% | 67 |
 
-Files where every run vector passes: `blocks`, `comments01`, `doctype01`, `inbody01`,
-`isindex`, `menuitem-element`, `noscript01`, `pending-spec-changes-plain-text-unsafe`,
-`quirks01`, `ruby`, `scriptdata01`, `tests3`, `tests5`, `tests6`, `tests8`, `tests14`,
-`tests15`, `tests16`, `tests17`, `tests22`, `tests23`, `tests25`, `tricky01`,
-`void-in-phrasing`.
+Files where every run vector passes: `blocks`, `comments01`, `doctype01`, `entities01`,
+`entities02`, `inbody01`, `isindex`, `menuitem-element`, `noscript01`,
+`pending-spec-changes-plain-text-unsafe`, `quirks01`, `ruby`, `scriptdata01`, `tests2`,
+`tests3`, `tests5`, `tests6`, `tests8`, `tests14`, `tests15`, `tests16`, `tests17`,
+`tests22`, `tests23`, `tests24`, `tests25`, `tricky01`, `void-in-phrasing`.
 
 ## Remaining failures, by cause
 
@@ -53,7 +54,7 @@ Files where every run vector passes: `blocks`, `comments01`, `doctype01`, `inbod
 | `<template>` (no template contents, no template insertion mode) | template.dat (124) |
 | Processing-instruction nodes expected by current vectors; Rustium emits bogus comments | processing-instructions.dat (84) |
 | Foreign content (svg, math, namespaced attributes, integration points) | tests9 (25), tests10 (52), tests11 (13), tests19 (part), tests24, svg, math |
-| In select | parts of tests1, tests2, webkit, tests_innerHTML_1 |
+| In select: a few vectors left | tests1 (1 select case), webkit02, tests_innerHTML_1 (not triaged individually) |
 | `html5test-com` (9 left), `webkit01` (8) | foreign content, `<?import ...>` processing instruction, and one select case |
 | `tests21`, `domjs-unsafe`, most of `plain-text-unsafe`, `webkit02`, `tests20`, `tests26` | triaged by sampling: SVG/MathML foreign content (including `<![CDATA[`), so they are covered by the foreign-content row |
 

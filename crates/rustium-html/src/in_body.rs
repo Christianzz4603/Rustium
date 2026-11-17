@@ -242,8 +242,9 @@ impl TreeBuilder {
             }
             "select" => {
                 self.reconstruct_formatting();
+                let next = self.mode_after_select_start();
                 self.insert_element(n, &attrs);
-                self.unsupported("select-mode-not-implemented");
+                self.mode = next;
             }
             "optgroup" | "option" => {
                 if self.current_is("option") {

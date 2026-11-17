@@ -638,3 +638,42 @@ fn seeded_fuzz_keeps_tree_invariants() {
         check_tree(&f.dom);
     }
 }
+
+fn body_html(src: &str) -> String {
+    let r = parse_document(src);
+    let body = r.dom.get_elements_by_tag_name(r.root, "body")[0];
+    r.dom.inner_html(body)
+}
+
+#[test]
+fn select_options_close_each_other() {
+    assert_eq!(
+        body_html("<select><option>a<option>b<optgroup><option>c</select>"),
+        "<select><option>a</option><option>b</option><optgroup><option>c</option></optgroup></select>"
+    );
+}
+
+#[test]
+fn select_allows_other_content_per_current_spec() {
+    // The current spec (and the WPT vectors) keep non-option content inside <select>.
+    assert_eq!(
+        body_html("<select>x<div>y</div><b>z</select>"),
+        "<select>x<div>y</div><b>z</b></select>"
+    );
+}
+
+#[test]
+fn input_inside_select_closes_it() {
+    assert_eq!(
+        body_html("<select><option>a<input>b"),
+        "<select><option>a</option></select><input>b"
+    );
+}
+
+#[test]
+fn table_part_inside_select_in_table_closes_the_select() {
+    assert_eq!(
+        body_html("<table><tr><td><select><option>a<td>b</table>"),
+        "<table><tbody><tr><td><select><option>a</option></select></td><td>b</td></tr></tbody></table>"
+    );
+}

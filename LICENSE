@@ -1,37 +1,49 @@
-Rustium License (MIT-based, with attribution and responsibility terms)
+The Rustium License
 
-Copyright (c) 2026 Christianzz4603 (the "Author") and Rustium contributors
+Copyright (c) 2026 Christian Jay (Christianzz4603) and Rustium contributors
+
+Hi! Rustium is free for you to use. Build on it, change it, ship it, even sell
+what you make with it. I only ask that you follow the few simple rules below.
+
+This license is based on the well-known MIT license, with a couple of extra
+terms I care about (rules 2 and 3).
+
+THE RULES
+
+1. Keep my name on it.
+   Keep this license and the copyright line above in every copy of Rustium, or
+   of any big piece of it, that you share. If you ship a product, website, or
+   app built on Rustium, please give credit somewhere people can actually find
+   it, like an About page, a credits screen, or your README. Something like
+   "Built on Rustium by Christian Jay (Christianzz4603)" is perfect.
+   If you change Rustium, say so, and don't make it look like I approve of or
+   built your version.
+
+2. What you make is yours, and so is the responsibility.
+   I'm happy to see what people build, but I can't control it, and I'm not
+   responsible for it. If something you create with Rustium is dangerous,
+   illegal, or hurts someone, that's on you, not on me or the other people who
+   worked on Rustium. Please follow the laws that apply to you (privacy,
+   security, copyright, export rules, and so on), and don't use Rustium to
+   break the law or to hurt people or their systems. And please don't say or
+   imply that I'm okay with that kind of use.
+
+3. Don't use my name to sell yours.
+   You can use the credit from rule 1, but please don't use the names "Rustium"
+   or "Christian Jay" / "Christianzz4603" to promote your own product without
+   asking me first.
+
+4. If you break the rules, the permission stops.
+   Your permission to use Rustium ends automatically if you break these terms.
+   Stop breaking them and it comes back.
+
+THE LEGAL BIT (the part lawyers like)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-1. Attribution. The above copyright notice and this permission notice must be
-   included in all copies or substantial portions of the Software. Any product,
-   website, or documentation that ships or is built on the Software must credit
-   the Author by name ("Built on Rustium by Christianzz4603", or equivalent
-   wording) in a place users can reasonably find, such as an About page, a
-   credits or licenses screen, or the README. Modified versions must say that
-   they are modified and must not suggest the Author endorses them.
-
-2. Your creations are your responsibility. The Author is not responsible for
-   anything you or anyone else creates, builds, distributes, or does with the
-   Software or with products derived from it. You alone are responsible for
-   making sure that your use complies with the laws that apply to you,
-   including laws on privacy, security, intellectual property, and export. You
-   must not use the Software in a way that is unlawful or that is intended to
-   cause harm to people or systems, and you must not present such use as
-   approved by the Author.
-
-3. No endorsement. The names "Rustium" and "Christianzz4603" may not be used to
-   promote derived products without prior written permission, beyond the
-   credit required by clause 1.
-
-4. Termination. If you break these conditions, your permission under this
-   license ends automatically. It is reinstated when you stop the violation.
+copies of the Software, subject to the rules above.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,

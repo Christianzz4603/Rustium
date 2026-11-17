@@ -5,7 +5,7 @@
 //! after after body, and the frameset modes (in `frameset.rs`).
 //!
 //! NOT implemented (reported as `Unsupported` diagnostics where encountered):
-//! in select / in template modes, foreign
+//! in template mode, foreign
 //! content (svg/math are plain elements). Quirks detection is in `quirks.rs`.
 //! The table mode family lives in `tables.rs`.
 
@@ -36,6 +36,8 @@ pub(crate) enum Mode {
     InTableBody,
     InRow,
     InCell,
+    InSelect,
+    InSelectInTable,
     AfterBody,
     AfterAfterBody,
     InFrameset,
@@ -432,6 +434,8 @@ impl TreeBuilder {
                 Mode::InTableBody => self.in_table_body(tok),
                 Mode::InRow => self.in_row(tok),
                 Mode::InCell => self.in_cell(tok),
+                Mode::InSelect => self.in_select(tok),
+                Mode::InSelectInTable => self.in_select_in_table(tok),
                 Mode::AfterBody => self.after_body(tok),
                 Mode::AfterAfterBody => self.after_after_body(tok),
                 Mode::InFrameset => self.in_frameset(tok),
@@ -672,6 +676,7 @@ impl TreeBuilder {
                     if self.has_in_scope("template", Scope::Default) {
                         self.generate_implied_end_tags(None);
                         self.pop_until("template");
+                        self.reset_insertion_mode();
                     } else {
                         self.error("unexpected-end-tag");
                     }
