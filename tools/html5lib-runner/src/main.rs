@@ -99,7 +99,21 @@ fn dump_node(dom: &Dom, id: NodeId, depth: usize, out: &mut Vec<String>) {
         }
         NodeData::Text(t) => out.push(format!("| {pad}\"{t}\"")),
         NodeData::Comment(c) => out.push(format!("| {pad}<!-- {c} -->")),
-        NodeData::Doctype { name } => out.push(format!("| {pad}<!DOCTYPE {name}>")),
+        NodeData::Doctype {
+            name,
+            public_id,
+            system_id,
+        } => {
+            if public_id.is_some() || system_id.is_some() {
+                out.push(format!(
+                    "| {pad}<!DOCTYPE {name} \"{}\" \"{}\">",
+                    public_id.as_deref().unwrap_or(""),
+                    system_id.as_deref().unwrap_or("")
+                ));
+            } else {
+                out.push(format!("| {pad}<!DOCTYPE {name}>"));
+            }
+        }
         NodeData::Document | NodeData::DocumentFragment => {}
     }
     for c in dom.children(id) {

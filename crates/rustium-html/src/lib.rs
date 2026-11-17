@@ -15,9 +15,11 @@
 //! reported as `Unsupported` diagnostics where practical.
 
 mod entities;
+mod entity_table;
 mod formatting;
 mod frameset;
 mod in_body;
+mod quirks;
 mod tables;
 mod token;
 mod tokenizer;

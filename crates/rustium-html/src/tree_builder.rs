@@ -6,9 +6,8 @@
 //!
 //! NOT implemented (reported as `Unsupported` diagnostics where encountered):
 //! in select / in template modes, foreign
-//! content (svg/math are plain elements), and exact quirks-mode detection
-//! (the DOCTYPE name only is consulted, not its identifiers). The table mode
-//! family lives in `tables.rs`.
+//! content (svg/math are plain elements). Quirks detection is in `quirks.rs`.
+//! The table mode family lives in `tables.rs`.
 
 use rustium_common::{Atom, Diagnostic, Severity, Span};
 use rustium_dom::{Dom, NodeData, NodeId};
@@ -180,7 +179,7 @@ pub(crate) struct TreeBuilder {
     pub foster_parenting: bool,
     /// Character tokens collected by the "in table text" mode.
     pub pending_table_text: String,
-    /// Quirks mode, approximated: set when the DOCTYPE is missing or its name is not `html`.
+    /// Quirks mode (see `quirks.rs`); limited-quirks mode is not distinguished.
     pub quirks: bool,
     /// The spec's `frameset-ok` flag: cleared by content that makes a later `<frameset>` invalid.
     pub frameset_ok: bool,
@@ -466,13 +465,25 @@ impl TreeBuilder {
                 self.insert_comment(&c, Some(doc));
                 None
             }
-            Token::Doctype { name } => {
-                let d = self.dom.create_doctype(name.as_deref().unwrap_or(""));
+            Token::Doctype {
+                name,
+                public_id,
+                system_id,
+                force_quirks,
+            } => {
+                let d = self.dom.create_doctype(
+                    name.as_deref().unwrap_or(""),
+                    public_id.as_deref(),
+                    system_id.as_deref(),
+                );
                 let doc = self.dom.document();
                 let _ = self.dom.append_child(doc, d);
-                // Approximation: public/system identifiers are not consulted.
-                self.quirks = name.as_deref() != Some("html");
-                self.unsupported("quirks-mode-from-doctype-identifiers");
+                self.quirks = crate::quirks::is_quirks_mode(
+                    name.as_deref(),
+                    public_id.as_deref(),
+                    system_id.as_deref(),
+                    force_quirks,
+                );
                 self.mode = Mode::BeforeHtml;
                 None
             }

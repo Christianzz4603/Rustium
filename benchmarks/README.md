@@ -53,10 +53,19 @@ owned token strings.
 | Before | 108.9M | n/a |
 | Static atoms for ~125 common HTML names; single allocation when lowercasing names | 95.9M | -11.9% |
 
-The html5lib pass count is unchanged (1311 / 1891). This is an instruction count on one
+The html5lib pass count was unchanged (1311 / 1891) at that point. This is an instruction count on one
 workload, not a throughput claim and not a comparison with any other engine.
 Next candidates: zero-copy tokens (borrow from the input instead of owning
 `String`s), text stored without a per-node allocation, reserving node capacity.
+
+## After frameset modes, DOCTYPE identifiers, full entity table
+
+Same workload and method as above: 102.5M instructions, up 6.8% from 95.9M. Likely
+contributors (not isolated): the per-start-tag `frameset-ok` check, the DOCTYPE state
+machine, and binary search over the 2,125-entry entity table for every `&`.
+Wall-clock throughput on this run read about 30 MB/s, but the sandbox was also
+slower for the same code than in earlier sessions, so wall-clock numbers are not
+comparable across sessions; trust only the instruction counts within one method.
 
 ## Not measured yet
 

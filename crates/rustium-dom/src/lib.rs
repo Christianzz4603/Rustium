@@ -91,9 +91,16 @@ impl Dom {
     }
 
     /// Creates a detached doctype node.
-    pub fn create_doctype(&mut self, name: &str) -> NodeId {
+    pub fn create_doctype(
+        &mut self,
+        name: &str,
+        public_id: Option<&str>,
+        system_id: Option<&str>,
+    ) -> NodeId {
         self.alloc(NodeData::Doctype {
             name: name.to_string(),
+            public_id: public_id.map(str::to_string),
+            system_id: system_id.map(str::to_string),
         })
     }
 

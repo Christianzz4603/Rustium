@@ -85,7 +85,9 @@ fn doctype_node_is_created() {
     assert_eq!(
         r.dom.node(first).data,
         NodeData::Doctype {
-            name: "html".into()
+            name: "html".into(),
+            public_id: None,
+            system_id: None
         }
     );
 }

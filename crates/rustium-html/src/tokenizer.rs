@@ -4,10 +4,10 @@
 //! stage, restructured around helper functions instead of one state per enum
 //! variant. Implemented: data, RCDATA, RAWTEXT, script data (including the
 //! escaped and double-escaped sub-states), PLAINTEXT, tags, attributes,
-//! comments, bogus comments, DOCTYPE names, and character references.
+//! comments, bogus comments, DOCTYPEs (with public/system identifiers), and
+//! character references.
 //!
-//! Not implemented: DOCTYPE public/system identifiers (skipped, reported as
-//! `Unsupported`) and CDATA sections in foreign content (no foreign content yet).
+//! Not implemented: CDATA sections in foreign content (no foreign content yet).
 //!
 //! Input must already have CRLF/CR normalized to LF (see `lib.rs`).
 
@@ -26,6 +26,21 @@ pub enum RawKind {
     Script,
     /// `<plaintext>`: everything until EOF.
     Plaintext,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum DoctypeKind {
+    Public,
+    System,
+}
+
+/// Where the DOCTYPE state machine continues after an identifier or keyword.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum DoctypeNext {
+    Emit,
+    Bogus,
+    AfterPublic,
+    AfterSystem,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -318,33 +333,228 @@ impl<'a> Tokenizer<'a> {
         Token::Comment(content.replace('\0', "\u{FFFD}"))
     }
 
-    /// `pos` is just after `<!DOCTYPE`.
+    /// `pos` is just after `<!DOCTYPE`. Implements the spec's DOCTYPE states,
+    /// including PUBLIC/SYSTEM identifiers, force-quirks, and bogus DOCTYPE.
     fn lex_doctype(&mut self) -> Token {
+        let mut force_quirks = false;
         self.skip_ws();
-        let name = self.take_until(|b| is_ws(b) || b == b'>');
-        let name = if name.is_empty() {
-            self.diag("missing-doctype-name");
-            None
-        } else {
-            Some(name.to_ascii_lowercase().replace('\0', "\u{FFFD}"))
+        let name = match self.peek() {
+            None => {
+                self.diag("eof-in-doctype");
+                return Token::Doctype {
+                    name: None,
+                    public_id: None,
+                    system_id: None,
+                    force_quirks: true,
+                };
+            }
+            Some(b'>') => {
+                self.diag("missing-doctype-name");
+                self.pos += 1;
+                return Token::Doctype {
+                    name: None,
+                    public_id: None,
+                    system_id: None,
+                    force_quirks: true,
+                };
+            }
+            Some(_) => {
+                let raw = self.take_until(|b| is_ws(b) || b == b'>');
+                Some(lower_name(raw))
+            }
         };
-        let rest_start = self.pos;
-        let rest = self.take_until(|b| b == b'>');
-        if !rest.trim().is_empty() {
-            self.diags.push(Diagnostic::unsupported(
-                "doctype-identifiers-ignored",
+        let mut public_id = None;
+        let mut system_id = None;
+        self.skip_ws();
+        let mut next = match self.peek() {
+            None => {
+                self.diag("eof-in-doctype");
+                force_quirks = true;
+                DoctypeNext::Emit
+            }
+            Some(b'>') => {
+                self.pos += 1;
+                DoctypeNext::Emit
+            }
+            Some(_) => {
+                let rest = self.src.as_bytes();
+                let kw = |k: &[u8]| {
+                    rest.len() >= self.pos + 6
+                        && rest[self.pos..self.pos + 6].eq_ignore_ascii_case(k)
+                };
+                if kw(b"public") {
+                    self.pos += 6;
+                    self.doctype_keyword(DoctypeKind::Public, &mut public_id, &mut force_quirks)
+                } else if kw(b"system") {
+                    self.pos += 6;
+                    self.doctype_keyword(DoctypeKind::System, &mut system_id, &mut force_quirks)
+                } else {
+                    self.diag("invalid-character-sequence-after-doctype-name");
+                    force_quirks = true;
+                    DoctypeNext::Bogus
+                }
+            }
+        };
+        // After a PUBLIC identifier: optional SYSTEM identifier.
+        if next == DoctypeNext::AfterPublic {
+            next = self.doctype_after_public(&mut system_id, &mut force_quirks);
+        }
+        if next == DoctypeNext::AfterSystem {
+            self.skip_ws();
+            next = match self.peek() {
+                None => {
+                    self.diag("eof-in-doctype");
+                    force_quirks = true;
+                    DoctypeNext::Emit
+                }
+                Some(b'>') => {
+                    self.pos += 1;
+                    DoctypeNext::Emit
+                }
+                Some(_) => {
+                    self.diag("unexpected-character-after-doctype-system-identifier");
+                    DoctypeNext::Bogus
+                }
+            };
+        }
+        if next == DoctypeNext::Bogus {
+            self.take_until(|b| b == b'>');
+            if self.peek().is_some() {
+                self.pos += 1;
+            }
+        }
+        Token::Doctype {
+            name,
+            public_id,
+            system_id,
+            force_quirks,
+        }
+    }
+
+    /// Reads a quoted DOCTYPE identifier whose opening quote is at `pos`.
+    /// Returns the next state: `Done` when the closing quote was found.
+    fn doctype_quoted(
+        &mut self,
+        kind: DoctypeKind,
+        slot: &mut Option<String>,
+        force_quirks: &mut bool,
+    ) -> DoctypeNext {
+        let q = self.src.as_bytes()[self.pos];
+        self.pos += 1;
+        let base = self.pos;
+        let raw = self.take_until(|b| b == q || b == b'>');
+        if raw.contains('\0') {
+            self.diags.push(Diagnostic::parse_error(
+                "unexpected-null-character",
                 Span {
-                    start: rest_start,
-                    end: self.pos,
+                    start: base,
+                    end: base,
                 },
             ));
         }
-        if self.peek().is_some() {
-            self.pos += 1;
-        } else {
-            self.diag("eof-in-doctype");
+        *slot = Some(raw.replace('\0', "\u{FFFD}"));
+        match self.peek() {
+            Some(c) if c == q => {
+                self.pos += 1;
+                match kind {
+                    DoctypeKind::Public => DoctypeNext::AfterPublic,
+                    DoctypeKind::System => DoctypeNext::AfterSystem,
+                }
+            }
+            Some(_) => {
+                self.diag(match kind {
+                    DoctypeKind::Public => "abrupt-doctype-public-identifier",
+                    DoctypeKind::System => "abrupt-doctype-system-identifier",
+                });
+                *force_quirks = true;
+                self.pos += 1;
+                DoctypeNext::Emit
+            }
+            None => {
+                self.diag("eof-in-doctype");
+                *force_quirks = true;
+                DoctypeNext::Emit
+            }
         }
-        Token::Doctype { name }
+    }
+
+    /// After the PUBLIC or SYSTEM keyword, up to and including the identifier.
+    fn doctype_keyword(
+        &mut self,
+        kind: DoctypeKind,
+        slot: &mut Option<String>,
+        force_quirks: &mut bool,
+    ) -> DoctypeNext {
+        let (miss_ws, miss_id, miss_quote) = match kind {
+            DoctypeKind::Public => (
+                "missing-whitespace-after-doctype-public-keyword",
+                "missing-doctype-public-identifier",
+                "missing-quote-before-doctype-public-identifier",
+            ),
+            DoctypeKind::System => (
+                "missing-whitespace-after-doctype-system-keyword",
+                "missing-doctype-system-identifier",
+                "missing-quote-before-doctype-system-identifier",
+            ),
+        };
+        let had_ws = self.peek().is_some_and(is_ws);
+        self.skip_ws();
+        match self.peek() {
+            Some(b'"' | b'\'') => {
+                if !had_ws {
+                    self.diag(miss_ws);
+                }
+                self.doctype_quoted(kind, slot, force_quirks)
+            }
+            Some(b'>') => {
+                self.diag(miss_id);
+                *force_quirks = true;
+                self.pos += 1;
+                DoctypeNext::Emit
+            }
+            None => {
+                self.diag("eof-in-doctype");
+                *force_quirks = true;
+                DoctypeNext::Emit
+            }
+            Some(_) => {
+                self.diag(miss_quote);
+                *force_quirks = true;
+                DoctypeNext::Bogus
+            }
+        }
+    }
+
+    /// After a closing quote of the public identifier: an optional system identifier.
+    fn doctype_after_public(
+        &mut self,
+        system_id: &mut Option<String>,
+        force_quirks: &mut bool,
+    ) -> DoctypeNext {
+        let had_ws = self.peek().is_some_and(is_ws);
+        self.skip_ws();
+        match self.peek() {
+            Some(b'>') => {
+                self.pos += 1;
+                DoctypeNext::Emit
+            }
+            Some(b'"' | b'\'') => {
+                if !had_ws {
+                    self.diag("missing-whitespace-between-doctype-public-and-system-identifiers");
+                }
+                self.doctype_quoted(DoctypeKind::System, system_id, force_quirks)
+            }
+            None => {
+                self.diag("eof-in-doctype");
+                *force_quirks = true;
+                DoctypeNext::Emit
+            }
+            Some(_) => {
+                self.diag("missing-quote-before-doctype-system-identifier");
+                *force_quirks = true;
+                DoctypeNext::Bogus
+            }
+        }
     }
 
     /// `pos` is at the first character of a tag name (an ASCII letter).

@@ -1,9 +1,11 @@
 //! Character reference decoding.
 //!
 //! Numeric references are fully handled per the HTML Living Standard
-//! (including the windows-1252 C1 remapping). Named references cover only a
-//! curated subset (~80 of the 2,231 spec entities); see docs/ARCHITECTURE.md.
-//! Unknown names are left as literal text and reported as a parse error.
+//! (including the windows-1252 C1 remapping). Named references use the full
+//! table in `entity_table.rs` (2,125 names, 106 of them legacy). Unknown names
+//! are left as literal text.
+
+use crate::entity_table::{ENTITIES, LEGACY_MAX_LEN};
 
 /// A decoded character reference.
 #[derive(Debug, PartialEq, Eq)]
@@ -15,90 +17,6 @@ pub struct CharRef {
     /// Parse-error code if the reference was malformed but recovered.
     pub error: Option<&'static str>,
 }
-
-/// (name, replacement, allowed without trailing semicolon)
-const NAMED: &[(&str, &str, bool)] = &[
-    ("amp", "&", true),
-    ("AMP", "&", true),
-    ("lt", "<", true),
-    ("LT", "<", true),
-    ("gt", ">", true),
-    ("GT", ">", true),
-    ("quot", "\"", true),
-    ("QUOT", "\"", true),
-    ("apos", "'", false),
-    ("nbsp", "\u{a0}", true),
-    ("copy", "\u{a9}", true),
-    ("COPY", "\u{a9}", true),
-    ("reg", "\u{ae}", true),
-    ("REG", "\u{ae}", true),
-    ("trade", "\u{2122}", false),
-    ("hellip", "\u{2026}", false),
-    ("mdash", "\u{2014}", false),
-    ("ndash", "\u{2013}", false),
-    ("lsquo", "\u{2018}", false),
-    ("rsquo", "\u{2019}", false),
-    ("ldquo", "\u{201c}", false),
-    ("rdquo", "\u{201d}", false),
-    ("bull", "\u{2022}", false),
-    ("middot", "\u{b7}", true),
-    ("euro", "\u{20ac}", false),
-    ("pound", "\u{a3}", true),
-    ("yen", "\u{a5}", true),
-    ("cent", "\u{a2}", true),
-    ("sect", "\u{a7}", true),
-    ("para", "\u{b6}", true),
-    ("deg", "\u{b0}", true),
-    ("plusmn", "\u{b1}", true),
-    ("times", "\u{d7}", true),
-    ("divide", "\u{f7}", true),
-    ("laquo", "\u{ab}", true),
-    ("raquo", "\u{bb}", true),
-    ("micro", "\u{b5}", true),
-    ("frac12", "\u{bd}", true),
-    ("frac14", "\u{bc}", true),
-    ("frac34", "\u{be}", true),
-    ("sup2", "\u{b2}", true),
-    ("sup3", "\u{b3}", true),
-    ("larr", "\u{2190}", false),
-    ("uarr", "\u{2191}", false),
-    ("rarr", "\u{2192}", false),
-    ("darr", "\u{2193}", false),
-    ("hearts", "\u{2665}", false),
-    ("check", "\u{2713}", false),
-    ("agrave", "\u{e0}", true),
-    ("aacute", "\u{e1}", true),
-    ("acirc", "\u{e2}", true),
-    ("atilde", "\u{e3}", true),
-    ("auml", "\u{e4}", true),
-    ("aring", "\u{e5}", true),
-    ("ccedil", "\u{e7}", true),
-    ("egrave", "\u{e8}", true),
-    ("eacute", "\u{e9}", true),
-    ("ecirc", "\u{ea}", true),
-    ("euml", "\u{eb}", true),
-    ("igrave", "\u{ec}", true),
-    ("iacute", "\u{ed}", true),
-    ("icirc", "\u{ee}", true),
-    ("iuml", "\u{ef}", true),
-    ("ntilde", "\u{f1}", true),
-    ("ograve", "\u{f2}", true),
-    ("oacute", "\u{f3}", true),
-    ("ocirc", "\u{f4}", true),
-    ("otilde", "\u{f5}", true),
-    ("ouml", "\u{f6}", true),
-    ("ugrave", "\u{f9}", true),
-    ("uacute", "\u{fa}", true),
-    ("ucirc", "\u{fb}", true),
-    ("uuml", "\u{fc}", true),
-    ("szlig", "\u{df}", true),
-    ("Agrave", "\u{c0}", true),
-    ("Aacute", "\u{c1}", true),
-    ("Eacute", "\u{c9}", true),
-    ("Ntilde", "\u{d1}", true),
-    ("Ouml", "\u{d6}", true),
-    ("Uuml", "\u{dc}", true),
-];
 
 const C1: [u32; 32] = [
     0x20AC, 0x81, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021, 0x02C6, 0x2030, 0x0160, 0x2039,
@@ -181,19 +99,20 @@ fn decode_named(s: &str, in_attr: bool) -> Option<CharRef> {
         return None;
     }
     if b.get(n) == Some(&b';') {
-        if let Some((_, v, _)) = NAMED.iter().find(|(name, _, _)| *name == &s[..n]) {
+        if let Ok(i) = ENTITIES.binary_search_by(|e| e.0.cmp(&s[..n])) {
             return Some(CharRef {
-                value: (*v).to_string(),
+                value: ENTITIES[i].1.to_string(),
                 consumed: n + 1,
                 error: None,
             });
         }
     }
     // Longest legacy prefix that may omit the semicolon.
-    for p in (1..=n).rev() {
-        let Some((_, v, _)) = NAMED
-            .iter()
-            .find(|(name, _, legacy)| *legacy && *name == &s[..p])
+    for p in (1..=n.min(LEGACY_MAX_LEN)).rev() {
+        let Some(i) = ENTITIES
+            .binary_search_by(|e| e.0.cmp(&s[..p]))
+            .ok()
+            .filter(|&i| ENTITIES[i].2)
         else {
             continue;
         };
@@ -204,7 +123,7 @@ fn decode_named(s: &str, in_attr: bool) -> Option<CharRef> {
             }
         }
         return Some(CharRef {
-            value: (*v).to_string(),
+            value: ENTITIES[i].1.to_string(),
             consumed: p,
             error: Some("missing-semicolon-after-character-reference"),
         });
@@ -267,6 +186,17 @@ mod tests {
         assert_eq!(dec("#99999999999999999999;").unwrap().0, "\u{FFFD}");
         assert_eq!(dec("#128;").unwrap().0, "\u{20AC}");
         assert_eq!(dec("#x92;").unwrap().0, "\u{2019}");
+    }
+
+    #[test]
+    fn full_table_samples() {
+        assert_eq!(dec("lang;"), Some(("\u{27e8}".into(), 5)));
+        assert_eq!(dec("ImaginaryI;"), Some(("\u{2148}".into(), 11)));
+        assert_eq!(dec("NotEqualTilde;"), Some(("\u{2242}\u{338}".into(), 14)));
+        // `&notit;` decodes the legacy `&not` prefix.
+        assert_eq!(dec("notit;"), Some(("\u{ac}".into(), 3)));
+        // `&notin;` is the longer, semicolon-terminated name.
+        assert_eq!(dec("notin;"), Some(("\u{2209}".into(), 6)));
     }
 
     #[test]

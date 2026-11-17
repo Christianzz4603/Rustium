@@ -49,7 +49,7 @@ impl Dom {
                 out.push_str(c);
                 out.push_str("-->");
             }
-            NodeData::Doctype { name } => {
+            NodeData::Doctype { name, .. } => {
                 out.push_str("<!DOCTYPE ");
                 out.push_str(name);
                 out.push('>');
@@ -94,7 +94,21 @@ impl Dom {
     fn dump_node(&self, id: NodeId, depth: usize, out: &mut String) {
         let pad = "  ".repeat(depth);
         match &self.node(id).data {
-            NodeData::Doctype { name } => out.push_str(&format!("{pad}<!DOCTYPE {name}>\n")),
+            NodeData::Doctype {
+                name,
+                public_id,
+                system_id,
+            } => {
+                if public_id.is_some() || system_id.is_some() {
+                    out.push_str(&format!(
+                        "{pad}<!DOCTYPE {name} \"{}\" \"{}\">\n",
+                        public_id.as_deref().unwrap_or(""),
+                        system_id.as_deref().unwrap_or("")
+                    ));
+                } else {
+                    out.push_str(&format!("{pad}<!DOCTYPE {name}>\n"));
+                }
+            }
             NodeData::Comment(c) => out.push_str(&format!("{pad}<!-- {c} -->\n")),
             NodeData::Text(t) => out.push_str(&format!("{pad}\"{t}\"\n")),
             NodeData::Element(e) => {

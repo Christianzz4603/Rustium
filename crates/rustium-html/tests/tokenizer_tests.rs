@@ -118,26 +118,73 @@ fn bogus_comments() {
     assert_eq!(tokenize("<!foo>"), vec![Token::Comment("foo".into())]);
 }
 
+fn dt(name: Option<&str>, public: Option<&str>, system: Option<&str>, fq: bool) -> Token {
+    Token::Doctype {
+        name: name.map(Into::into),
+        public_id: public.map(Into::into),
+        system_id: system.map(Into::into),
+        force_quirks: fq,
+    }
+}
+
 #[test]
 fn doctype() {
     assert_eq!(
         tokenize("<!DOCTYPE html>"),
-        vec![Token::Doctype {
-            name: Some("html".into())
-        }]
+        vec![dt(Some("html"), None, None, false)]
     );
     assert_eq!(
         tokenize("<!doctype HTML>"),
-        vec![Token::Doctype {
-            name: Some("html".into())
-        }]
+        vec![dt(Some("html"), None, None, false)]
     );
-    assert_eq!(tokenize("<!DOCTYPE>"), vec![Token::Doctype { name: None }]);
+    assert_eq!(tokenize("<!DOCTYPE>"), vec![dt(None, None, None, true)]);
+}
+
+#[test]
+fn doctype_public_and_system_identifiers() {
     assert_eq!(
-        tokenize(r#"<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">"#),
-        vec![Token::Doctype {
-            name: Some("html".into())
-        }]
+        tokenize(r#"<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://x/y.dtd">"#),
+        vec![dt(
+            Some("html"),
+            Some("-//W3C//DTD HTML 4.01//EN"),
+            Some("http://x/y.dtd"),
+            false
+        )]
+    );
+    assert_eq!(
+        tokenize("<!DOCTYPE html SYSTEM 'a\"b'>"),
+        vec![dt(Some("html"), None, Some("a\"b"), false)]
+    );
+    assert_eq!(
+        tokenize(r#"<!DOCTYPE html PUBLIC "p">"#),
+        vec![dt(Some("html"), Some("p"), None, false)]
+    );
+}
+
+#[test]
+fn malformed_doctypes_force_quirks() {
+    // Missing identifier after PUBLIC.
+    assert_eq!(
+        tokenize("<!DOCTYPE html PUBLIC>"),
+        vec![dt(Some("html"), None, None, true)]
+    );
+    // Unterminated identifier.
+    assert_eq!(
+        tokenize("<!DOCTYPE html PUBLIC \"abc"),
+        vec![dt(Some("html"), Some("abc"), None, true)]
+    );
+    // Garbage after the name becomes a bogus DOCTYPE.
+    assert_eq!(
+        tokenize("<!DOCTYPE html foo bar>x"),
+        vec![
+            dt(Some("html"), None, None, true),
+            Token::Character("x".into())
+        ]
+    );
+    // Garbage after the system identifier does not force quirks.
+    assert_eq!(
+        tokenize("<!DOCTYPE html SYSTEM \"s\" junk>"),
+        vec![dt(Some("html"), None, Some("s"), false)]
     );
 }
 

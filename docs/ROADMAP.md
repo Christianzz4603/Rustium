@@ -9,15 +9,15 @@ Done:
 - [x] `rustium-common`, `rustium-dom`, `rustium-html`, `rustium-core`
 - [x] Tokenizer, character references (subset), tree builder, adoption agency
 - [x] Fragment parsing, parse diagnostics, depth and formatting-list limits
-- [x] 110 tests including seeded fuzzing
-- [x] html5lib tree-construction runner (`tools/html5lib-runner`); 72.8% of 1891 vectors pass (see CONFORMANCE.md)
-- [x] Table insertion modes with foster parenting; in head noscript; script-data escape states; frameset modes
+- [x] 119 tests including seeded fuzzing
+- [x] html5lib tree-construction runner (`tools/html5lib-runner`); 74.8% of 1891 vectors pass (see CONFORMANCE.md)
+- [x] Table insertion modes with foster parenting; in head noscript; script-data escape states; frameset modes; DOCTYPE identifiers and quirks mode; full named character reference table
 
 Remaining before Phase 1 is closed:
 - [ ] Tokenizer vectors (`.test` JSON) in the runner; keep pass rates published as they move
-- [ ] Full named character reference table
+- [x] Full named character reference table (2,125 names, generated from html5lib-tests namedEntities.test)
 - [ ] In select, in template (template contents fragment), foreign content (svg/math)
-- [ ] Quirks mode detection from DOCTYPE
+- [x] Quirks mode detection from DOCTYPE (limited-quirks is not distinguished; it only affects layout)
 - [x] Baseline parse benchmark in `benchmarks/` (throughput MB/s, node counts; peak memory not yet measured)
 - [ ] DOM events infrastructure (design alongside JS bindings)
 - [ ] Node reclamation / generation ids

@@ -5,10 +5,16 @@ use rustium_common::Span;
 /// An HTML token.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
-    /// `<!DOCTYPE name ...>`. Public/system identifiers are not retained.
+    /// `<!DOCTYPE name PUBLIC "..." "...">`.
     Doctype {
         /// Lowercased name, if present.
         name: Option<String>,
+        /// Public identifier, if present (may be empty).
+        public_id: Option<String>,
+        /// System identifier, if present (may be empty).
+        system_id: Option<String>,
+        /// The spec's force-quirks flag (set by malformed DOCTYPEs).
+        force_quirks: bool,
     },
     /// A start tag.
     StartTag {

@@ -55,10 +55,14 @@ pub enum NodeData {
     Document,
     /// A document fragment.
     DocumentFragment,
-    /// `<!DOCTYPE name>`.
+    /// `<!DOCTYPE name PUBLIC "..." "...">`.
     Doctype {
         /// Doctype name.
         name: String,
+        /// Public identifier, if the DOCTYPE had one.
+        public_id: Option<String>,
+        /// System identifier, if the DOCTYPE had one.
+        system_id: Option<String>,
     },
     /// An element.
     Element(ElementData),
