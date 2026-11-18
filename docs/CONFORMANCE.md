@@ -84,3 +84,13 @@ The 29 failures, all known and understood:
 |-------|---------|
 | `<?` handling: current vectors expect no comment token for `<?x`; Rustium emits a bogus comment (same open question as processing-instructions.dat above) | 25 |
 | NUL in the data state is dropped instead of emitted as a character (documented deviation; the tree builder would have to ignore it per mode) | 4 |
+
+## CSS tokenizer
+
+`crates/rustium-css` implements the CSS Syntax Module Level 3 tokenization algorithm.
+It has **not** been run against an external test suite (such as the `css-parsing-tests`
+JSON vectors), so no conformance percentage is claimed. Evidence so far: 19 hand-written
+tests (escapes, numbers, urls and bad urls, strings and bad strings, CDO/CDC, preprocessing),
+a seeded fuzz test checking it never panics and always terminates, and linear-time checks on
+200k-token inputs. The algorithm was written from memory of the spec, so differences from
+the current spec text are possible until vectors are run.

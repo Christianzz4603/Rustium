@@ -16,9 +16,10 @@ What works today:
 - HTML tree builder with misnested-markup recovery (adoption agency algorithm, implied end tags)
 - Document and fragment parsing
 - Arena-backed DOM with tree mutation, attributes, traversal, simple queries, mutation records, serialization
+- CSS tokenizer (CSS Syntax Level 3 tokenization, with spec parse errors recorded); tokenizer only so far
 - Parse diagnostics: every recovered error and every unsupported construct is reported, never silently dropped
 
-What does **not** exist yet: CSS, style, layout, painting, networking, JavaScript,
+What does **not** exist yet: a CSS parser, selectors, style, layout, painting, networking, JavaScript,
 WebAssembly, security boundaries. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 **No standards-compliance claim is made.** Measured against the web-platform-tests
@@ -53,8 +54,10 @@ The engine currently has no third-party dependencies.
 | `crates/rustium-common` | Shared types: `Atom`, `Span`, `Diagnostic` |
 | `crates/rustium-dom` | Arena DOM |
 | `crates/rustium-html` | Tokenizer and tree builder |
+| `crates/rustium-css` | CSS tokenizer (parser not started) |
 | `crates/rustium-core` | Public facade for embedders (API unstable) |
 | `tools/html5lib-runner` | Runs html5lib tree-construction vectors and reports pass rates |
+| `tools/tokenizer-runner` | Runs html5lib tokenizer vectors and reports pass rates |
 | `benchmarks/` | Parse benchmark |
 | `docs/` | Architecture, conformance, roadmap, security, conventions |
 

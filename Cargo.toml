@@ -6,6 +6,7 @@ members = [
     "crates/rustium-html",
     "crates/rustium-core",
     "benchmarks/parse-bench",
+    "crates/rustium-css",
     "tools/html5lib-runner",
     "tools/tokenizer-runner",
 ]
