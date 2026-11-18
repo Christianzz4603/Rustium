@@ -135,7 +135,7 @@ fn is_non_printable(c: char) -> bool {
     matches!(c, '\u{0}'..='\u{8}' | '\u{b}' | '\u{e}'..='\u{1f}' | '\u{7f}')
 }
 fn valid_escape(a: Option<char>, b: Option<char>) -> bool {
-    a == Some('\\') && b.is_some_and(|b| b != '\n')
+    a == Some('\\') && b != Some('\n')
 }
 
 impl Lexer {

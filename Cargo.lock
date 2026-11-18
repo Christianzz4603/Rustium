@@ -3,6 +3,13 @@
 version = 3
 
 [[package]]
+name = "css-runner"
+version = "0.1.0"
+dependencies = [
+ "rustium-css",
+]
+
+[[package]]
 name = "html5lib-runner"
 version = "0.1.0"
 dependencies = [

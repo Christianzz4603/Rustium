@@ -327,3 +327,33 @@ fn long_inputs_stay_linear() {
     assert!(t.tokens.is_empty());
     assert_eq!(t.errors, vec!["eof-in-comment"]);
 }
+
+#[test]
+fn trailing_backslash_at_eof_is_a_valid_escape() {
+    let t = rustium_css::tokenize("a\\");
+    assert_eq!(
+        t.tokens,
+        vec![rustium_css::Token::Ident("a\u{fffd}".into())]
+    );
+}
+
+#[test]
+fn unclosed_blocks_are_closed_at_eof() {
+    use rustium_css::{parse_component_value_list, BlockKind, ComponentValue};
+    let p = parse_component_value_list("(a [b");
+    assert_eq!(p.errors, vec!["eof-in-block", "eof-in-block"]);
+    assert!(matches!(
+        &p.values[0],
+        ComponentValue::Block {
+            kind: BlockKind::Paren,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn deep_nesting_does_not_overflow_the_stack() {
+    let src = "(".repeat(200_000);
+    let p = rustium_css::parse_component_value_list(&src);
+    assert_eq!(p.values.len(), 1);
+}

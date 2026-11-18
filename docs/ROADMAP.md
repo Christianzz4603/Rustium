@@ -9,7 +9,7 @@ Done:
 - [x] `rustium-common`, `rustium-dom`, `rustium-html`, `rustium-core`
 - [x] Tokenizer, character references (subset), tree builder, adoption agency
 - [x] Fragment parsing, parse diagnostics, depth and formatting-list limits
-- [x] 144 tests including seeded fuzzing
+- [x] 147 tests including seeded fuzzing
 - [x] html5lib tree-construction runner (`tools/html5lib-runner`); 75.6% of 1891 vectors pass (see CONFORMANCE.md)
 - [x] Table insertion modes with foster parenting; in head noscript; script-data escape states; frameset modes; DOCTYPE identifiers and quirks mode; full named character reference table
 
@@ -25,7 +25,7 @@ Remaining before Phase 1 is closed:
 
 ## Phase 2: CSS and style
 
-- `rustium-css`: tokenizer (done: CSS Syntax L3 tokenization, 19 hand-written tests and a seeded fuzz test; not yet run against an external vector suite), parser (rules, at-rules skeleton, declarations), selectors Level 4 subset, specificity, value parsing (colors, lengths, keywords)
+- `rustium-css`: tokenizer and component values (done; css-parsing-tests `component_value_list.json` 38/38 run pass, 12 skipped, see CONFORMANCE.md), parser (rules, at-rules skeleton, declarations), selectors Level 4 subset, specificity, value parsing (colors, lengths, keywords)
 - `rustium-style`: selector matching, cascade (origin, specificity, order, `!important`), inheritance, computed values, default UA stylesheet
 - Decide D3 (global interner)
 - Invalidation hooks driven by DOM mutation records

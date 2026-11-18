@@ -85,12 +85,25 @@ The 29 failures, all known and understood:
 | `<?` handling: current vectors expect no comment token for `<?x`; Rustium emits a bogus comment (same open question as processing-instructions.dat above) | 25 |
 | NUL in the data state is dropped instead of emitted as a character (documented deviation; the tree builder would have to ignore it per mode) | 4 |
 
-## CSS tokenizer
+## CSS tokenizer and component values
 
-`crates/rustium-css` implements the CSS Syntax Module Level 3 tokenization algorithm.
-It has **not** been run against an external test suite (such as the `css-parsing-tests`
-JSON vectors), so no conformance percentage is claimed. Evidence so far: 19 hand-written
-tests (escapes, numbers, urls and bad urls, strings and bad strings, CDO/CDC, preprocessing),
-a seeded fuzz test checking it never panics and always terminates, and linear-time checks on
-200k-token inputs. The algorithm was written from memory of the spec, so differences from
-the current spec text are possible until vectors are run.
+`crates/rustium-css` implements the CSS Syntax Module Level 3 tokenizer plus grouping into
+component values (blocks and functions, built with an explicit stack). It is run against
+`component_value_list.json` from <https://github.com/SimonSapin/css-parsing-tests>
+(not vendored) with `tools/css-runner`:
+
+**38 of 38 run pass (100%); 12 skipped** of 50. Other files in that suite (declarations,
+rules, stylesheets, An+B, colors) are not run, because there is no parser for them yet.
+
+Skipped, on purpose, and counted:
+- 9 vectors expecting `unicode-range` tokens and 2 expecting `~=`-style match tokens: both
+  were removed from the spec, so the current tokenizer does not produce them.
+- 1 vector expecting `["error", ")"]` entries for mismatched closers (this layer keeps a
+  mismatched closer as a plain token and reports no error for it).
+
+Comparison limits: numbers are compared by value and integer/number type only (the tokenizer
+keeps no source text), percentages by value only, and of the parse errors only `eof-in-string`
+and `eof-in-url` are compared as counts. The run found one real bug (a lone `\` at end of
+input must be a valid escape yielding U+FFFD), now fixed with a regression test. This is a
+measurement on one file of one suite, not a compliance claim. Other evidence: hand-written
+tests, a seeded fuzz test, linear-time checks, and a 200,000-deep nesting test.

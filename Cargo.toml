@@ -9,6 +9,7 @@ members = [
     "crates/rustium-css",
     "tools/html5lib-runner",
     "tools/tokenizer-runner",
+    "tools/css-runner",
 ]
 
 [workspace.package]
